@@ -1,0 +1,913 @@
+import Reveal from './components/common/Reveal'
+import Eyebrow from './components/common/Eyebrow'
+import Navbar from './components/layout/Navbar'
+import Footer from './components/layout/Footer'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  ArrowRight,
+  BookOpen,
+  CalendarDays,
+  Check,
+  GitBranch,
+  Lock,
+  Menu,
+  RotateCcw,
+  Sparkles,
+  X,
+} from 'lucide-react'
+
+import kayappLogo from './assets/KAYAPP.png'
+
+/* ------------------------------------------------------------------ */
+/* Data                                                                */
+/* ------------------------------------------------------------------ */
+
+const features = [
+  {
+    icon: CalendarDays,
+    title: 'Study Planner',
+    description:
+      'Organize your study sessions, tasks, and deadlines in one place.',
+    number: '01',
+  },
+  {
+    icon: BookOpen,
+    title: 'Subject Tracker',
+    description:
+      'Keep track of your subjects, topics, and learning progress.',
+    number: '02',
+  },
+  {
+    icon: GitBranch,
+    title: 'Learning Paths',
+    description:
+      'Discover which topics to study first based on their prerequisites.',
+    number: '03',
+  },
+]
+
+const steps = [
+  {
+    icon: BookOpen,
+    title: 'Add your subjects',
+    text: 'List what you’re studying this term.',
+  },
+  {
+    icon: CalendarDays,
+    title: 'Plan your sessions',
+    text: 'Set tasks and deadlines that fit your week.',
+  },
+  {
+    icon: GitBranch,
+    title: 'Follow your path',
+    text: 'See what to study next, one topic at a time.',
+  },
+]
+
+// Demo learning path: each topic lists its prerequisites.
+const topics = [
+  { id: 'arith', label: 'Arithmetic', level: 0, needs: [] },
+  { id: 'algebra', label: 'Algebra', level: 1, needs: ['arith'] },
+  { id: 'geometry', label: 'Geometry', level: 1, needs: ['arith'] },
+  { id: 'functions', label: 'Functions', level: 2, needs: ['algebra'] },
+  { id: 'trig', label: 'Trigonometry', level: 2, needs: ['algebra', 'geometry'] },
+  { id: 'calculus', label: 'Calculus', level: 3, needs: ['functions', 'trig'] },
+]
+
+const labelOf = (id) => topics.find((t) => t.id === id)?.label ?? id
+
+const initialTasks = [
+  { id: 1, text: 'Review Algebra notes', time: '4:00 PM', done: true },
+  { id: 2, text: 'Finish Physics worksheet', time: '6:30 PM', done: false },
+  { id: 3, text: 'Read Chapter 5 — History', time: '8:00 PM', done: false },
+]
+
+/* ------------------------------------------------------------------ */
+/* Small helpers                                                       */
+/* ------------------------------------------------------------------ */
+
+function Reveal({ children, delay = 0, className = '' }) {
+  const ref = useRef(null)
+  const [shown, setShown] = useState(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    if (typeof IntersectionObserver === 'undefined') {
+      setShown(true)
+      return
+    }
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShown(true)
+          io.disconnect()
+        }
+      },
+      { threshold: 0.15 },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+
+  return (
+    <div
+      ref={ref}
+      style={{ transitionDelay: `${delay}ms` }}
+      className={`reveal ${shown ? 'reveal-in' : ''} ${className}`}
+    >
+      {children}
+    </div>
+  )
+}
+
+function Eyebrow({ children }) {
+  return (
+    <p className="text-xs font-bold uppercase tracking-[2px] text-[#B78116]">
+      {children}
+    </p>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/* Hero planner mock (interactive)                                     */
+/* ------------------------------------------------------------------ */
+
+function PlannerMock() {
+  const [tasks, setTasks] = useState(initialTasks)
+  const doneCount = tasks.filter((t) => t.done).length
+  const pct = Math.round((doneCount / tasks.length) * 100)
+
+  const toggle = (id) =>
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t)),
+    )
+
+  return (
+    <div className="relative mx-auto w-full max-w-sm sm:pb-20">
+      {/* soft glow */}
+      <div
+        aria-hidden="true"
+        className="absolute -inset-6 rounded-[2rem] bg-gradient-to-br from-[#F5B82E]/30 via-transparent to-[#173761]/10 blur-2xl"
+      />
+
+      <div className="float-slow relative rounded-2xl border border-[#E7E9E5] bg-white p-5 shadow-[0_20px_60px_-20px_rgba(23,55,97,0.35)]">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Today
+            </p>
+            <p className="text-lg font-bold">Study plan</p>
+          </div>
+          <span className="rounded-full bg-[#FFF4D6] px-3 py-1 text-xs font-bold text-[#8A5F0B]">
+            {doneCount}/{tasks.length} done
+          </span>
+        </div>
+
+        <div
+          className="mt-4 h-2 overflow-hidden rounded-full bg-[#E9EDF2]"
+          role="progressbar"
+          aria-valuenow={pct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Today's progress"
+        >
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-[#F5B82E] to-[#E6A51C] transition-all duration-500"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+
+        <ul className="mt-4 space-y-2">
+          {tasks.map((t) => (
+            <li key={t.id}>
+              <button
+                type="button"
+                onClick={() => toggle(t.id)}
+                aria-pressed={t.done}
+                className="group flex w-full items-center gap-3 rounded-xl border border-transparent bg-[#FAFAF7] px-3 py-3 text-left transition hover:border-[#D6B75E] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173761]"
+              >
+                <span
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
+                    t.done
+                      ? 'border-[#173761] bg-[#173761] text-white'
+                      : 'border-slate-300 bg-white text-transparent group-hover:border-[#173761]'
+                  }`}
+                >
+                  <Check size={13} strokeWidth={3} />
+                </span>
+                <span
+                  className={`flex-1 text-sm transition ${
+                    t.done ? 'text-slate-400 line-through' : 'text-[#173761]'
+                  }`}
+                >
+                  {t.text}
+                </span>
+                <span className="text-xs text-slate-400">{t.time}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        <p className="mt-4 text-center text-xs text-slate-400">
+          Try it — tap a task ☝️
+        </p>
+      </div>
+
+      {/* floating chip */}
+      <div className="float-slower absolute bottom-0 right-4 hidden items-center gap-2 rounded-xl border border-[#E7E9E5] bg-white px-4 py-3 shadow-lg sm:flex">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#EAF0F7] text-[#173761]">
+          <GitBranch size={16} />
+        </span>
+        <div>
+          <p className="text-[11px] text-slate-400">Next up</p>
+          <p className="text-sm font-bold">Functions</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/* Learning path demo (the gimmick)                                    */
+/* ------------------------------------------------------------------ */
+
+function PathDemo() {
+  const [done, setDone] = useState([])
+  const [shakeId, setShakeId] = useState(null)
+  const [note, setNote] = useState(
+    'Pick an open topic to get started.',
+  )
+
+  const statusOf = (topic) => {
+    if (done.includes(topic.id)) return 'done'
+    return topic.needs.every((n) => done.includes(n)) ? 'open' : 'locked'
+  }
+
+  const total = topics.length
+  const pct = Math.round((done.length / total) * 100)
+  const finished = done.length === total
+
+  const handleClick = (topic) => {
+    const status = statusOf(topic)
+
+    if (status === 'locked') {
+      const missing = topic.needs.filter((n) => !done.includes(n)).map(labelOf)
+      setNote(`Finish ${missing.join(' and ')} before ${topic.label}.`)
+      setShakeId(topic.id)
+      setTimeout(() => setShakeId(null), 450)
+      return
+    }
+
+    if (status === 'done') {
+      // undo only if nothing else depends on it
+      const dependents = topics.filter(
+        (t) => t.needs.includes(topic.id) && done.includes(t.id),
+      )
+      if (dependents.length) {
+        setNote(
+          `Can’t undo — ${dependents
+            .map((d) => d.label)
+            .join(', ')} depends on it.`,
+        )
+        setShakeId(topic.id)
+        setTimeout(() => setShakeId(null), 450)
+        return
+      }
+      setDone((d) => d.filter((id) => id !== topic.id))
+      setNote(`${topic.label} marked as not done.`)
+      return
+    }
+
+    const next = [...done, topic.id]
+    setDone(next)
+    const unlocked = topics.filter(
+      (t) =>
+        !next.includes(t.id) &&
+        t.needs.includes(topic.id) &&
+        t.needs.every((n) => next.includes(n)),
+    )
+    setNote(
+      next.length === total
+        ? 'You finished the whole path! 🎉'
+        : unlocked.length
+          ? `Nice! Unlocked: ${unlocked.map((u) => u.label).join(', ')}.`
+          : `Nice! ${topic.label} done.`,
+    )
+  }
+
+  const reset = () => {
+    setDone([])
+    setNote('Pick an open topic to get started.')
+  }
+
+  const columns = useMemo(
+    () =>
+      [0, 1, 2, 3].map((level) => ({
+        level,
+        items: topics.filter((t) => t.level === level),
+      })),
+    [],
+  )
+
+  return (
+    <div className="relative overflow-hidden rounded-3xl bg-[#173761] p-6 text-white shadow-[0_30px_80px_-30px_rgba(23,55,97,0.6)] sm:p-10">
+      {/* decor */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[#F5B82E]/20 blur-3xl"
+      />
+      <div
+        aria-hidden="true"
+        className="dot-grid pointer-events-none absolute inset-0 opacity-[0.07]"
+      />
+
+      {finished && (
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+          {Array.from({ length: 18 }).map((_, i) => (
+            <span
+              key={i}
+              className="confetti"
+              style={{
+                left: `${(i * 37) % 100}%`,
+                animationDelay: `${(i % 6) * 120}ms`,
+                background: i % 3 === 0 ? '#F5B82E' : i % 3 === 1 ? '#fff' : '#7FA6D6',
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      <div className="relative">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="max-w-md">
+            <p className="text-xs font-bold uppercase tracking-[2px] text-[#F5B82E]">
+              Try it · Learning Path
+            </p>
+            <h3 className="mt-2 text-2xl font-bold sm:text-3xl">
+              See what to study first.
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-white/70">
+              Tap a topic to complete it. Topics with prerequisites unlock
+              as soon as you’ve finished the ones they depend on.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={reset}
+            className="inline-flex items-center gap-2 rounded-lg border border-white/20 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F5B82E]"
+          >
+            <RotateCcw size={15} />
+            Reset
+          </button>
+        </div>
+
+        {/* progress */}
+        <div className="mt-6 flex items-center gap-3">
+          <div
+            className="h-2 flex-1 overflow-hidden rounded-full bg-white/15"
+            role="progressbar"
+            aria-valuenow={pct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Learning path progress"
+          >
+            <div
+              className="h-full rounded-full bg-[#F5B82E] transition-all duration-500"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <span className="w-20 text-right text-xs font-semibold text-white/70">
+            {done.length}/{total} topics
+          </span>
+        </div>
+
+        {/* topics */}
+        <div className="mt-6 grid gap-4 md:grid-cols-4">
+          {columns.map((col) => (
+            <div key={col.level} className="flex flex-col gap-3 md:justify-center">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-white/40">
+                Step {col.level + 1}
+              </p>
+
+              {col.items.map((topic) => {
+                const status = statusOf(topic)
+                const isDone = status === 'done'
+                const isOpen = status === 'open'
+
+                return (
+                  <button
+                    key={topic.id}
+                    type="button"
+                    onClick={() => handleClick(topic)}
+                    aria-disabled={status === 'locked'}
+                    aria-label={`${topic.label} — ${status}`}
+                    className={[
+                      'group relative flex items-center gap-3 rounded-xl border px-4 py-3.5 text-left transition',
+                      'focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F5B82E]',
+                      shakeId === topic.id ? 'shake' : '',
+                      isDone
+                        ? 'border-[#F5B82E] bg-[#F5B82E] text-[#173761]'
+                        : isOpen
+                          ? 'pulse-ring border-white/40 bg-white/10 hover:bg-white/20'
+                          : 'cursor-not-allowed border-white/10 bg-white/[0.03] text-white/40',
+                    ].join(' ')}
+                  >
+                    <span
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
+                        isDone
+                          ? 'bg-[#173761] text-[#F5B82E]'
+                          : isOpen
+                            ? 'bg-white/15'
+                            : 'bg-white/5'
+                      }`}
+                    >
+                      {isDone ? (
+                        <Check size={15} strokeWidth={3} />
+                      ) : isOpen ? (
+                        <Sparkles size={14} />
+                      ) : (
+                        <Lock size={13} />
+                      )}
+                    </span>
+
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-bold">
+                        {topic.label}
+                      </span>
+                      <span
+                        className={`block truncate text-[11px] ${
+                          isDone ? 'text-[#173761]/70' : 'text-white/45'
+                        }`}
+                      >
+                        {topic.needs.length
+                          ? `Needs: ${topic.needs.map(labelOf).join(' + ')}`
+                          : 'Start here'}
+                      </span>
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          ))}
+        </div>
+
+        <p
+          aria-live="polite"
+          className="mt-6 min-h-[1.5rem] rounded-lg bg-white/5 px-4 py-3 text-sm text-white/80"
+        >
+          {note}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/* App                                                                 */
+/* ------------------------------------------------------------------ */
+
+function App() {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+  const heroRef = useRef(null)
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  const handleHeroMove = (e) => {
+    const el = heroRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    el.style.setProperty('--mx', `${e.clientX - rect.left}px`)
+    el.style.setProperty('--my', `${e.clientY - rect.top}px`)
+  }
+
+  const navLinks = [
+    { href: '#features', label: 'Features' },
+    { href: '#try', label: 'Try it' },
+    { href: '#about', label: 'About' },
+  ]
+
+  return (
+    <div className="min-h-screen scroll-smooth bg-[#FAFAF7] text-[#173761]">
+      <style>{`
+        html { scroll-behavior: smooth; }
+        section[id] { scroll-margin-top: 72px; }
+
+        .reveal { opacity: 0; transform: translateY(24px); transition: opacity .7s ease, transform .7s ease; }
+        .reveal-in { opacity: 1; transform: none; }
+
+        @keyframes floaty { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-10px) } }
+        .float-slow { animation: floaty 6s ease-in-out infinite; }
+        .float-slower { animation: floaty 8s ease-in-out infinite reverse; }
+
+        @keyframes shake { 0%,100% { transform: translateX(0) } 20% { transform: translateX(-6px) } 40% { transform: translateX(6px) } 60% { transform: translateX(-4px) } 80% { transform: translateX(4px) } }
+        .shake { animation: shake .4s ease; }
+
+        @keyframes pulseRing { 0% { box-shadow: 0 0 0 0 rgba(245,184,46,.55) } 70% { box-shadow: 0 0 0 10px rgba(245,184,46,0) } 100% { box-shadow: 0 0 0 0 rgba(245,184,46,0) } }
+        .pulse-ring { animation: pulseRing 2s infinite; }
+
+        @keyframes fall { 0% { transform: translateY(-20px) rotate(0); opacity: 1 } 100% { transform: translateY(520px) rotate(540deg); opacity: 0 } }
+        .confetti { position: absolute; top: 0; width: 8px; height: 14px; border-radius: 2px; animation: fall 2.2s ease-in forwards; }
+
+        @keyframes shimmer { to { background-position: 200% center } }
+        .shimmer-text {
+          background: linear-gradient(90deg, #E6A51C 0%, #F9D56E 30%, #E6A51C 60%, #F9D56E 100%);
+          background-size: 200% auto;
+          -webkit-background-clip: text; background-clip: text;
+          -webkit-text-fill-color: transparent; color: transparent;
+          animation: shimmer 5s linear infinite;
+        }
+
+        .dot-grid { background-image: radial-gradient(currentColor 1px, transparent 1px); background-size: 22px 22px; }
+
+        .fade-bottom {
+          -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
+          mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
+        }
+
+        .spotlight {
+          background: radial-gradient(420px circle at var(--mx, 70%) var(--my, 20%), rgba(245,184,46,.16), transparent 60%);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          html { scroll-behavior: auto; }
+          .reveal { opacity: 1; transform: none; transition: none; }
+          .float-slow, .float-slower, .pulse-ring, .shimmer-text, .confetti, .shake { animation: none; }
+        }
+      `}</style>
+
+      {/* Navigation */}
+      <header
+        className={`sticky top-0 z-50 border-b bg-white/85 backdrop-blur transition-shadow ${
+          scrolled
+            ? 'border-[#E9E9E3] shadow-[0_6px_24px_-12px_rgba(23,55,97,0.25)]'
+            : 'border-transparent'
+        }`}
+      >
+        <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
+          <a href="#" aria-label="KayApp home">
+            <img
+              src={kayappLogo}
+              alt="KayApp"
+              className="h-14 w-28 object-contain"
+            />
+          </a>
+
+          <div className="hidden items-center gap-8 md:flex">
+            {navLinks.map((l) => (
+              <a
+                key={l.href}
+                href={l.href}
+                className="text-sm text-slate-600 transition hover:text-[#173761]"
+              >
+                {l.label}
+              </a>
+            ))}
+
+            <a
+              href="#get-started"
+              className="rounded-lg bg-[#173761] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#244B7D] hover:shadow-lg"
+            >
+              Get Started
+            </a>
+          </div>
+
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="rounded-lg p-2 hover:bg-slate-100 md:hidden"
+            aria-label="Toggle navigation"
+            aria-expanded={menuOpen}
+          >
+            {menuOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </nav>
+
+        {menuOpen && (
+          <div className="space-y-1 border-t border-slate-100 bg-white p-4 md:hidden">
+            {navLinks.map((l) => (
+              <a
+                key={l.href}
+                href={l.href}
+                onClick={() => setMenuOpen(false)}
+                className="block rounded-lg px-3 py-3 text-sm hover:bg-slate-50"
+              >
+                {l.label}
+              </a>
+            ))}
+
+            <a
+              href="#get-started"
+              onClick={() => setMenuOpen(false)}
+              className="block rounded-lg bg-[#173761] px-3 py-3 text-sm font-semibold text-white"
+            >
+              Get Started
+            </a>
+          </div>
+        )}
+      </header>
+
+      <main>
+        {/* Hero */}
+        <section
+          id="about"
+          ref={heroRef}
+          onMouseMove={handleHeroMove}
+          className="relative overflow-hidden"
+        >
+          <div
+            aria-hidden="true"
+            className="spotlight fade-bottom pointer-events-none absolute inset-0"
+          />
+          <div
+            aria-hidden="true"
+            className="dot-grid fade-bottom pointer-events-none absolute inset-0 text-[#173761] opacity-[0.05]"
+          />
+
+          <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-6 py-16 sm:py-24 lg:grid-cols-[1.1fr_0.9fr]">
+            <div>
+              <Reveal>
+                <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#EBDDB0] bg-[#FFF8E3] px-3 py-1.5 text-xs font-bold uppercase tracking-[2px] text-[#B78116]">
+                  <Sparkles size={13} />
+                  Your personal student planner
+                </p>
+              </Reveal>
+
+              <Reveal delay={80}>
+                <h1 className="text-4xl font-bold leading-[1.1] tracking-tight sm:text-6xl">
+                  Make studying
+                  <br />
+                  <span className="shimmer-text">feel more manageable.</span>
+                </h1>
+              </Reveal>
+
+              <Reveal delay={160}>
+                <p className="mt-6 max-w-xl text-base leading-7 text-slate-600 sm:text-lg">
+                  Plan your study sessions, organize your subjects, and find
+                  your next learning step — all in one place.
+                </p>
+              </Reveal>
+
+              <Reveal delay={240}>
+                <div
+                  id="get-started"
+                  className="mt-8 flex flex-wrap items-center gap-4"
+                >
+                  <a
+                    href="#try"
+                    className="group inline-flex items-center gap-3 rounded-lg bg-[#173761] px-6 py-3.5 text-sm font-semibold text-white shadow-[0_10px_30px_-10px_rgba(23,55,97,0.7)] transition hover:-translate-y-0.5 hover:bg-[#244B7D]"
+                  >
+                    Try the Learning Path
+                    <ArrowRight
+                      size={17}
+                      className="transition-transform group-hover:translate-x-1"
+                    />
+                  </a>
+
+                  <a
+                    href="#features"
+                    className="rounded-lg px-4 py-3.5 text-sm font-semibold text-[#173761] transition hover:bg-[#173761]/5"
+                  >
+                    Explore features
+                  </a>
+                </div>
+
+                <p className="mt-5 text-sm text-slate-500">
+                  Kaya mo ’yan. May plano ka na.
+                </p>
+              </Reveal>
+            </div>
+
+            <Reveal delay={200} className="lg:pl-4">
+              <PlannerMock />
+            </Reveal>
+          </div>
+
+        </section>
+
+        {/* How it works */}
+        <section className="mx-auto max-w-6xl px-6 pb-20 pt-4 sm:pb-28">
+          <Reveal>
+            <div className="mx-auto max-w-xl text-center">
+              <Eyebrow>How it works</Eyebrow>
+              <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+                Three simple steps.
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">
+                From a messy to-do list to a clear plan, in minutes.
+              </p>
+            </div>
+          </Reveal>
+
+          <div className="relative mt-14 grid gap-12 md:grid-cols-3 md:gap-6">
+            {/* dashed connector (desktop) */}
+            <div
+              aria-hidden="true"
+              className="absolute left-[17%] right-[17%] top-8 hidden border-t-2 border-dashed border-[#DCC580] md:block"
+            />
+
+            {steps.map((s, i) => {
+              const Icon = s.icon
+
+              return (
+                <Reveal key={s.title} delay={i * 120}>
+                  <div className="group relative flex flex-col items-center text-center">
+                    <div className="relative">
+                      <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#173761] text-[#F5B82E] shadow-[0_14px_30px_-12px_rgba(23,55,97,0.6)] ring-8 ring-[#FAFAF7] transition duration-300 group-hover:-translate-y-1 group-hover:rotate-3">
+                        <Icon size={26} strokeWidth={1.8} />
+                      </span>
+                      <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-[#F5B82E] text-xs font-bold text-[#173761] ring-2 ring-[#FAFAF7]">
+                        {i + 1}
+                      </span>
+                    </div>
+
+                    <h3 className="mt-6 text-lg font-bold">{s.title}</h3>
+                    <p className="mt-2 max-w-[16rem] text-sm leading-6 text-slate-600">
+                      {s.text}
+                    </p>
+                  </div>
+                </Reveal>
+              )
+            })}
+          </div>
+        </section>
+
+        {/* Features */}
+        <section
+          id="features"
+          className="border-y border-[#E9E9E3] bg-white"
+        >
+          <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
+            <Reveal>
+              <div className="mb-10 max-w-xl">
+                <Eyebrow>What you can do</Eyebrow>
+
+                <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+                  Everything starts with a plan.
+                </h2>
+
+                <p className="mt-4 text-sm leading-6 text-slate-600 sm:text-base">
+                  A simpler way to manage your academic workload and make
+                  progress one topic at a time.
+                </p>
+              </div>
+            </Reveal>
+
+            <div className="grid gap-5 md:grid-cols-3">
+              {features.map((feature, i) => {
+                const Icon = feature.icon
+
+                return (
+                  <Reveal key={feature.number} delay={i * 100}>
+                    <article className="group h-full rounded-xl border border-[#E7E9E5] bg-[#FAFAF7] p-6 transition duration-300 hover:-translate-y-1.5 hover:border-[#D6B75E] hover:bg-white hover:shadow-[0_20px_40px_-20px_rgba(23,55,97,0.3)]">
+                      <div className="flex items-center justify-between">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#EAF0F7] text-[#173761] transition duration-300 group-hover:bg-[#173761] group-hover:text-[#F5B82E]">
+                          <Icon size={21} strokeWidth={1.8} />
+                        </div>
+
+                        <span className="text-xs font-semibold text-slate-400">
+                          {feature.number}
+                        </span>
+                      </div>
+
+                      <h3 className="mt-6 text-lg font-bold">
+                        {feature.title}
+                      </h3>
+
+                      <p className="mt-3 text-sm leading-6 text-slate-600">
+                        {feature.description}
+                      </p>
+                    </article>
+                  </Reveal>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* Interactive demo */}
+        <section id="try" className="mx-auto max-w-6xl px-6 py-16 sm:py-24">
+          <Reveal>
+            <PathDemo />
+          </Reveal>
+        </section>
+
+        {/* Final CTA */}
+        <section className="mx-auto max-w-6xl px-6 pb-20">
+          <Reveal>
+            <div className="rounded-3xl border border-[#EBDDB0] bg-gradient-to-br from-[#FFF8E3] to-[#FFFDF5] px-6 py-12 text-center sm:px-12">
+              <h2 className="mx-auto max-w-xl text-3xl font-bold tracking-tight sm:text-4xl">
+                Start your plan today.
+              </h2>
+              <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-600 sm:text-base">
+                One topic, one session, one step at a time.
+              </p>
+              <a
+                href="#about"
+                className="group mt-7 inline-flex items-center gap-3 rounded-lg bg-[#173761] px-7 py-3.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#244B7D]"
+              >
+                Get Started
+                <ArrowRight
+                  size={17}
+                  className="transition-transform group-hover:translate-x-1"
+                />
+              </a>
+            </div>
+          </Reveal>
+        </section>
+      </main>
+
+      {/* Footer */}
+      <footer className="relative overflow-hidden bg-[#173761] text-white">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -left-24 -top-24 h-64 w-64 rounded-full bg-[#F5B82E]/15 blur-3xl"
+        />
+        <div
+          aria-hidden="true"
+          className="dot-grid pointer-events-none absolute inset-0 opacity-[0.06]"
+        />
+        <div className="h-1 w-full bg-gradient-to-r from-[#F5B82E] via-[#E6A51C] to-transparent" />
+
+        <div className="relative mx-auto max-w-6xl px-6 py-14">
+          <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr]">
+            <div>
+              <a href="#" className="text-2xl font-bold tracking-tight">
+                Kay<span className="text-[#F5B82E]">App</span>
+              </a>
+              <p className="mt-3 max-w-xs text-sm leading-6 text-white/65">
+                Smart Student Planner &amp; Learning Path. Plan your sessions,
+                track your subjects, and always know what to study next.
+              </p>
+              <p className="mt-5 inline-block rounded-full border border-[#F5B82E]/40 bg-[#F5B82E]/10 px-4 py-1.5 text-sm font-semibold text-[#F5B82E]">
+                Kaya mo ’yan. May plano ka na.
+              </p>
+            </div>
+
+            <nav aria-label="Explore">
+              <p className="text-xs font-bold uppercase tracking-[2px] text-white/45">
+                Explore
+              </p>
+              <ul className="mt-4 space-y-3 text-sm">
+                {[
+                  { href: '#about', label: 'About' },
+                  { href: '#features', label: 'Features' },
+                  { href: '#try', label: 'Try the demo' },
+                ].map((l) => (
+                  <li key={l.href}>
+                    <a
+                      href={l.href}
+                      className="text-white/75 transition hover:text-[#F5B82E]"
+                    >
+                      {l.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+
+            <nav aria-label="Product">
+              <p className="text-xs font-bold uppercase tracking-[2px] text-white/45">
+                Product
+              </p>
+              <ul className="mt-4 space-y-3 text-sm">
+                {features.map((f) => (
+                  <li key={f.title}>
+                    <a
+                      href="#features"
+                      className="text-white/75 transition hover:text-[#F5B82E]"
+                    >
+                      {f.title}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </div>
+
+          <div className="mt-12 flex flex-col gap-4 border-t border-white/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-white/50">
+              © {new Date().getFullYear()} KayApp. All rights reserved.
+            </p>
+
+            <a
+              href="#"
+              className="inline-flex items-center gap-2 text-xs font-semibold text-white/70 transition hover:text-[#F5B82E]"
+            >
+              Back to top
+              <ArrowRight size={14} className="-rotate-90" />
+            </a>
+          </div>
+        </div>
+      </footer>
+    </div>
+  )
+}
+
+export default App
