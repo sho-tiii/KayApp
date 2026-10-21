@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { createPortal } from 'react-dom'
 import {
   LogOut, Plus, Check, Trash2, Sun, Moon, Sparkles, X, Lock, Trophy, GitBranch,
   CalendarDays, BookOpen, BarChart3, Settings, ListOrdered, Home, CloudUpload, Zap,
   ChevronRight, ChevronDown, Upload, KeyRound, FileText, Star, Search,
   PanelLeftClose, PanelLeftOpen, Menu, Archive, RotateCcw, Clock, MoreHorizontal,
   MoreVertical, GripVertical, Circle, Play, Layers, HelpCircle, FileEdit,
-  CheckCircle2, RefreshCw, Eye, ArrowRight,
+  CheckCircle2, RefreshCw, Eye, ArrowRight, CheckSquare,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import kayappLogo from '../assets/KAYAPP.png'
@@ -278,12 +279,12 @@ function Modal({ isOpen, onClose, title, children, darkMode, maxWidth = 'max-w-l
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-[#0B1525]/60 p-4 backdrop-blur-xs">
+    <div onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }} className="fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto bg-[#0B1525]/65 p-3 backdrop-blur-sm sm:p-5">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-heading"
-        className={`w-full ${maxWidth} rounded-2xl border p-6 shadow-xl ${
+        className={`my-auto w-full ${maxWidth} max-h-[min(92dvh,820px)] overflow-y-auto rounded-3xl border p-4 shadow-[0_28px_90px_-28px_rgba(8,24,46,.65)] sm:p-6 ${
           darkMode ? 'border-[#2A3B51] bg-[#111F33] text-slate-100' : 'border-[#E7E9E5] bg-white text-[#173761]'
         }`}
       >
@@ -326,7 +327,8 @@ function ToastRegion({ toasts, onDismiss, darkMode }) {
               : 'border-[#E7E9E5] bg-white text-[#173761]'
           }`}
         >
-          <span>{toast.message}</span>
+          <span className="min-w-0 flex-1">{toast.message}</span>
+          {toast.action && <button type="button" onClick={() => { toast.action.onClick?.(); onDismiss(toast.id) }} className="shrink-0 rounded-lg border border-current/20 px-2.5 py-1.5 text-xs font-bold">{toast.action.label || 'Undo'}</button>}
           <button
             type="button"
             onClick={() => onDismiss(toast.id)}
@@ -475,6 +477,15 @@ function UploadReviewerWizard({
   const [savedCards, setSavedCards] = useState([])
 
   useEffect(() => {
+    if (!isOpen) return undefined
+    const handleEscape = (event) => {
+      if (event.key === 'Escape' && !busy) onClose()
+    }
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [isOpen, busy, onClose])
+
+  useEffect(() => {
     if (isOpen) {
       setStep(1)
       setFile(null)
@@ -554,7 +565,7 @@ function UploadReviewerWizard({
           answer: String(c.answer || '').trim(),
           keyPointsText: Array.isArray(c.key_points) && c.key_points.length > 0
             ? c.key_points.join(' | ')
-            : deriveKeyPoints(c.answer, c.prompt).join(' | '),
+            : deriveKeyPoints(c.prompt, c.answer).join(' | '),
           distractors: Array.isArray(c.distractors) && c.distractors.length >= 3
             ? c.distractors.slice(0, 3)
             : buildPlausibleDistractors(c.answer, allAnswers),
@@ -721,12 +732,12 @@ function UploadReviewerWizard({
   }
 
   return (
-    <div className="fixed inset-0 z-[92] flex items-center justify-center bg-[#0B1525]/70 p-4 backdrop-blur-xs">
+    <div onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) onClose() }} className="fixed inset-0 z-[92] flex items-center justify-center overflow-y-auto bg-[#0B1525]/70 p-2 backdrop-blur-xs sm:p-4">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="upload-wizard-title"
-        className={`flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border shadow-2xl ${surface}`}
+        className={`my-auto flex max-h-[94dvh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border shadow-2xl ${surface}`}
       >
         <div className={`flex items-center justify-between border-b px-6 py-4 ${darkMode ? 'border-[#2A3B51]' : 'border-[#E7E9E5]'}`}>
           <div>
@@ -1065,6 +1076,14 @@ function DeckStudyModal({ deck, cards, subjectName, darkMode, todayStr, onClose,
   const [showSummary, setShowSummary] = useState(false)
   const [saving, setSaving] = useState(false)
 
+  useEffect(() => {
+    const handleEscape = (event) => {
+      if (event.key === 'Escape' && !saving) onClose()
+    }
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [saving, onClose])
+
   const safeCards = workingCards.length > 0 ? workingCards : []
   const activeCard = safeCards[index] || safeCards[0] || { id: 'empty', prompt: '', answer: '', key_points: [], distractors: [] }
 
@@ -1072,7 +1091,7 @@ function DeckStudyModal({ deck, cards, subjectName, darkMode, todayStr, onClose,
     if (Array.isArray(activeCard.key_points) && activeCard.key_points.length > 0) {
       return activeCard.key_points
     }
-    return deriveKeyPoints(activeCard.answer, activeCard.prompt)
+    return deriveKeyPoints(activeCard.prompt, activeCard.answer)
   }, [activeCard])
 
   const shuffledMap = useMemo(() => {
@@ -1181,12 +1200,12 @@ function DeckStudyModal({ deck, cards, subjectName, darkMode, todayStr, onClose,
   const muted = darkMode ? 'text-slate-300' : 'text-slate-600'
 
   return (
-    <div className="fixed inset-0 z-[92] flex items-center justify-center bg-[#0B1525]/70 p-4 backdrop-blur-xs">
+    <div onMouseDown={(e) => { if (e.target === e.currentTarget && !saving) onClose() }} className="fixed inset-0 z-[92] flex items-center justify-center overflow-y-auto bg-[#0B1525]/70 p-2 backdrop-blur-xs sm:p-4">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="study-modal-heading"
-        className={`flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border shadow-2xl ${surface}`}
+        className={`my-auto flex max-h-[94dvh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border shadow-2xl ${surface}`}
       >
         <div className={`flex items-start justify-between gap-4 border-b px-6 py-4 ${darkMode ? 'border-[#2A3B51]' : 'border-[#E7E9E5]'}`}>
           <div>
@@ -1204,7 +1223,7 @@ function DeckStudyModal({ deck, cards, subjectName, darkMode, todayStr, onClose,
         </div>
 
         {!showSummary && (
-          <div className={`grid grid-cols-3 gap-2 border-b px-6 py-3 ${darkMode ? 'border-[#2A3B51] bg-[#0B1525]/40' : 'border-[#E7E9E5] bg-[#FAFAF7]'}`}>
+          <div className={`grid grid-cols-1 gap-2 border-b px-3 py-3 sm:grid-cols-3 sm:px-6 ${darkMode ? 'border-[#2A3B51] bg-[#0B1525]/40' : 'border-[#E7E9E5] bg-[#FAFAF7]'}`}>
             {[
               { key: 'flashcards', label: 'Flashcards (+5 pts)', icon: Layers },
               { key: 'quiz', label: 'Multiple Choice (+8 pts)', icon: HelpCircle },
@@ -1309,7 +1328,7 @@ function DeckStudyModal({ deck, cards, subjectName, darkMode, todayStr, onClose,
                       <li key={card.id} className="flex items-center justify-between gap-2">
                         <span className="truncate font-semibold">✓ {card.answer}</span>
                         <span className={muted}>
-                          Next review in {rating === 'easy' ? '4+ days' : '2+ days'}
+                          Next review: {fmtFullDate(computeNextReview(activeCard, rating, todayStr).due_date)}
                         </span>
                       </li>
                     ))}
@@ -1371,7 +1390,7 @@ function DeckStudyModal({ deck, cards, subjectName, darkMode, todayStr, onClose,
                           <p className={`mb-2 text-xs font-semibold ${muted}`}>
                             How well did you recall this? (Spaced Repetition schedules when this card returns):
                           </p>
-                          <div className="grid grid-cols-4 gap-2">
+                          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                             {[
                               { key: 'again', label: 'Again', sub: 'Repeat today', note: 'Forgot concept — needs immediate review', style: 'border-slate-300 bg-[#FAFAF7] text-[#173761] dark:border-[#2A3B51] dark:bg-[#0B1525] dark:text-slate-200' },
                               { key: 'hard', label: 'Hard', sub: 'In 1 day', note: 'Partially recalled with difficulty', style: 'border-[#EBDDB0] bg-[#FFF8E3] text-[#8A5F0B]' },
@@ -1645,6 +1664,34 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
   const [planSortDue, setPlanSortDue] = useState('due_asc')
   const [planSearch, setPlanSearch] = useState('')
 
+  // Productivity features (kept local until a dedicated activity-log table is added).
+  const [dailyGoal, setDailyGoal] = useState(() => {
+    try { return Math.max(1, Number(localStorage.getItem('kayapp-daily-goal') || 20)) } catch { return 20 }
+  })
+  const [studyMinutesToday, setStudyMinutesToday] = useState(() => {
+    try { return Number(JSON.parse(localStorage.getItem('kayapp-study-activity') || '{}')[ymd(new Date())]?.minutes || 0) } catch { return 0 }
+  })
+  const [studyActivity, setStudyActivity] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('kayapp-study-activity') || '{}') } catch { return {} }
+  })
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1))
+  const [calendarExpanded, setCalendarExpanded] = useState(true)
+  const [calendarDate, setCalendarDate] = useState(today)
+  const [focusMinutes, setFocusMinutes] = useState(25)
+  const [focusSecondsLeft, setFocusSecondsLeft] = useState(25 * 60)
+  const [focusRunning, setFocusRunning] = useState(false)
+  const [focusLinkedTopic, setFocusLinkedTopic] = useState('')
+  const [pipWindow, setPipWindow] = useState(null)
+  const [selectedTaskIds, setSelectedTaskIds] = useState([])
+  const [selectedArchiveKeys, setSelectedArchiveKeys] = useState([])
+  const bulkArchiveActionRef = useRef(false)
+  const [bulkActionBusy, setBulkActionBusy] = useState(false)
+  const [activityLoaded, setActivityLoaded] = useState(false)
+  const [cardEditor, setCardEditor] = useState(null)
+  const [cardEditorBusy, setCardEditorBusy] = useState(false)
+  const [deckDetail, setDeckDetail] = useState(null)
+  const [cardDeleteTarget, setCardDeleteTarget] = useState(null)
+
   // Permanent delete confirmation modal (ONLY used inside Archive!)
   const [permanentDeleteTarget, setPermanentDeleteTarget] = useState(null)
 
@@ -1684,9 +1731,20 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
   const topicInputRef = useRef(null)
   const studyOrderRef = useRef(null)
 
-  const pushToast = useCallback((message, type = 'info') => {
+  // Close all contextual menus whenever the user clicks/taps outside a menu or its trigger.
+  useEffect(() => {
+    const closeMenusOutside = (event) => {
+      if (event.target instanceof Element && event.target.closest('[data-kayapp-menu]')) return
+      setOpenListMenu('')
+      setOpenTaskMenuId('')
+    }
+    document.addEventListener('pointerdown', closeMenusOutside)
+    return () => document.removeEventListener('pointerdown', closeMenusOutside)
+  }, [])
+
+  const pushToast = useCallback((message, type = 'info', action = null) => {
     const id = `${Date.now()}-${Math.random()}`
-    setToasts((prev) => [...prev, { id, message, type }])
+    setToasts((prev) => [...prev, { id, message, type, action }])
     setTimeout(() => {
       setToasts((prev) => prev.filter((item) => item.id !== id))
     }, 5000)
@@ -1696,46 +1754,122 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
     setToasts((prev) => prev.filter((item) => item.id !== id))
   }, [])
 
+  // Hydrate study activity and dashboard preferences from Supabase (localStorage is only an offline cache).
+  useEffect(() => {
+    if (!session?.user?.id) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const [{ data: prefs, error: prefError }, { data: sessions, error: sessionError }] = await Promise.all([
+          supabase.from('kayapp_user_preferences').select('daily_goal_minutes').eq('user_id', session.user.id).maybeSingle(),
+          supabase.from('kayapp_study_sessions').select('id, studied_on, duration_minutes, session_type, cards_reviewed, xp_earned').eq('user_id', session.user.id).order('studied_on', { ascending: true }),
+        ])
+        if (cancelled) return
+        if (!prefError && prefs?.daily_goal_minutes) {
+          setDailyGoal(prefs.daily_goal_minutes)
+          try { localStorage.setItem('kayapp-daily-goal', String(prefs.daily_goal_minutes)) } catch {}
+        }
+        if (!sessionError && Array.isArray(sessions)) {
+          const next = {}
+          sessions.forEach((row) => {
+            const day = row.studied_on
+            if (!day) return
+            const item = next[day] || { minutes: 0, sessions: 0, cardsReviewed: 0, xp: 0 }
+            item.minutes += Number(row.duration_minutes || 0)
+            item.sessions += 1
+            item.cardsReviewed += Number(row.cards_reviewed || 0)
+            item.xp += Number(row.xp_earned || 0)
+            next[day] = item
+          })
+          setStudyActivity(next)
+          setStudyMinutesToday(next[ymd(new Date())]?.minutes || 0)
+          try { localStorage.setItem('kayapp-study-activity', JSON.stringify(next)) } catch {}
+        }
+      } catch (err) {
+        console.warn('Could not sync study activity; using local cache.', err)
+      } finally { if (!cancelled) setActivityLoaded(true) }
+    })()
+    return () => { cancelled = true }
+  }, [session?.user?.id])
+
+  useEffect(() => {
+    if (!focusRunning) return undefined
+    const timer = window.setInterval(() => {
+      setFocusSecondsLeft((remaining) => {
+        if (remaining <= 1) {
+          window.clearInterval(timer)
+          setFocusRunning(false)
+          recordStudyMinutes(focusMinutes, 'focus')
+          pushToast('Focus session complete. Your focus time was added to today’s goal.', 'success')
+          return 0
+        }
+        return remaining - 1
+      })
+    }, 1000)
+    return () => window.clearInterval(timer)
+  }, [focusRunning, pushToast, focusMinutes])
+
+
+  const openFloatingTimer = async () => {
+    try {
+      if (!('documentPictureInPicture' in window)) {
+        pushToast('Floating timer is supported in Chromium browsers. You can keep the timer visible in this tab meanwhile.', 'error')
+        return
+      }
+      const pip = await window.documentPictureInPicture.requestWindow({ width: 320, height: 190 })
+      pip.document.title = 'KayApp Focus Timer'
+      const style = pip.document.createElement('style')
+      style.textContent = `*{box-sizing:border-box}body{margin:0;background:#FAFAF7;color:#173761;font:14px system-ui,sans-serif}.wrap{padding:18px}.brand{font-size:11px;font-weight:700;letter-spacing:.08em;color:#B78116}.time{font-size:42px;font-weight:800;letter-spacing:-.04em;margin:10px 0}.row{display:flex;gap:8px}button{border:0;border-radius:9px;padding:9px 12px;font-weight:700;cursor:pointer;background:#173761;color:white}button.secondary{background:#fff;border:1px solid #e5e7eb;color:#173761}`
+      pip.document.head.appendChild(style)
+      setPipWindow(pip)
+      pip.addEventListener('pagehide', () => setPipWindow(null), { once: true })
+    } catch (err) {
+      pushToast('Could not open the floating timer. Check your browser permissions.', 'error')
+    }
+  }
+
+  const saveDailyGoal = async (value) => {
+    const goal = Number(value)
+    setDailyGoal(goal)
+    try { localStorage.setItem('kayapp-daily-goal', String(goal)) } catch {}
+    if (!session?.user?.id) return
+    const { error } = await supabase.from('kayapp_user_preferences').upsert({ user_id: session.user.id, daily_goal_minutes: goal, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+    if (error) pushToast('Goal changed on this device, but could not sync to your account. Run the KayApp SQL migration.', 'error')
+  }
+
+
   /* ---------- Archive Helpers ---------- */
   const toggleArchiveDeck = (deckId) => {
-    setArchivedDeckIds((prev) => {
-      const exists = prev.includes(deckId)
-      const next = exists ? prev.filter((id) => id !== deckId) : [...prev, deckId]
-      try { localStorage.setItem('kayapp-archived-decks', JSON.stringify(next)) } catch { /* ignore */ }
-      pushToast(exists ? 'Deck restored to Library.' : 'Deck moved to Archive.', 'info')
-      return next
-    })
+    const exists = archivedDeckIds.includes(deckId)
+    const next = exists ? archivedDeckIds.filter((id) => id !== deckId) : [...archivedDeckIds, deckId]
+    setArchivedDeckIds(next)
+    try { localStorage.setItem('kayapp-archived-decks', JSON.stringify(next)) } catch { /* ignore */ }
+    if (!bulkArchiveActionRef.current) pushToast(exists ? 'Deck restored to Library.' : 'Deck moved to Archive.', 'info', exists ? null : { label: 'Undo', onClick: () => toggleArchiveDeck(deckId) })
   }
 
   const toggleArchiveTask = (taskId) => {
     setOpenTaskMenuId('')
-    setArchivedTaskIds((prev) => {
-      const exists = prev.includes(taskId)
-      const next = exists ? prev.filter((id) => id !== taskId) : [...prev, taskId]
-      try { localStorage.setItem('kayapp-archived-tasks', JSON.stringify(next)) } catch { /* ignore */ }
-      pushToast(exists ? 'Task restored to Study Plan.' : 'Task moved to Archive.', 'info')
-      return next
-    })
+    const exists = archivedTaskIds.includes(taskId)
+    const next = exists ? archivedTaskIds.filter((id) => id !== taskId) : [...archivedTaskIds, taskId]
+    setArchivedTaskIds(next)
+    try { localStorage.setItem('kayapp-archived-tasks', JSON.stringify(next)) } catch { /* ignore */ }
+    if (!bulkArchiveActionRef.current) pushToast(exists ? 'Task restored to Study Plan.' : 'Task moved to Archive.', 'info', exists ? null : { label: 'Undo', onClick: () => toggleArchiveTask(taskId) })
   }
 
   const toggleArchiveSubject = (subId) => {
-    setArchivedSubjectIds((prev) => {
-      const exists = prev.includes(subId)
-      const next = exists ? prev.filter((id) => id !== subId) : [...prev, subId]
-      try { localStorage.setItem('kayapp-archived-subjects', JSON.stringify(next)) } catch { /* ignore */ }
-      pushToast(exists ? 'Subject restored to Library.' : 'Subject moved to Archive.', 'info')
-      return next
-    })
+    const exists = archivedSubjectIds.includes(subId)
+    const next = exists ? archivedSubjectIds.filter((id) => id !== subId) : [...archivedSubjectIds, subId]
+    setArchivedSubjectIds(next)
+    try { localStorage.setItem('kayapp-archived-subjects', JSON.stringify(next)) } catch { /* ignore */ }
+    if (!bulkArchiveActionRef.current) pushToast(exists ? 'Subject restored to Library.' : 'Subject moved to Archive.', 'info', exists ? null : { label: 'Undo', onClick: () => toggleArchiveSubject(subId) })
   }
 
   const toggleArchiveTopic = (topId) => {
-    setArchivedTopicIds((prev) => {
-      const exists = prev.includes(topId)
-      const next = exists ? prev.filter((id) => id !== topId) : [...prev, topId]
-      try { localStorage.setItem('kayapp-archived-topics', JSON.stringify(next)) } catch { /* ignore */ }
-      pushToast(exists ? 'Topic restored to Study Path.' : 'Topic moved to Archive.', 'info')
-      return next
-    })
+    const exists = archivedTopicIds.includes(topId)
+    const next = exists ? archivedTopicIds.filter((id) => id !== topId) : [...archivedTopicIds, topId]
+    setArchivedTopicIds(next)
+    try { localStorage.setItem('kayapp-archived-topics', JSON.stringify(next)) } catch { /* ignore */ }
+    if (!bulkArchiveActionRef.current) pushToast(exists ? 'Topic restored to Study Path.' : 'Topic moved to Archive.', 'info')
   }
 
   // Archiving a list completely hides the list AND archives its tasks so it truly disappears from the board!
@@ -1761,7 +1895,7 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
         })
       }
       if (mobileActiveList === listName) setMobileActiveList('all')
-      pushToast(`Archived list "${listName}". You can restore it anytime from Archive.`, 'info')
+      if (!bulkArchiveActionRef.current) pushToast(`Archived list "${listName}". You can restore it anytime from Archive.`, 'info')
     } else {
       const nextLists = archivedListNames.filter((n) => n !== listName)
       setArchivedListNames(nextLists)
@@ -1778,7 +1912,7 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
           return filtered
         })
       }
-      pushToast(`Restored list "${listName}" to Study Plan.`, 'success')
+      if (!bulkArchiveActionRef.current) pushToast(`Restored list "${listName}" to Study Plan.`, 'success')
     }
   }
 
@@ -2129,8 +2263,13 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
   }
 
   const handleSessionComplete = async (deck, sessionCards, ratingsMap, methodKey, earnedXp, todayStr) => {
-    const updatePromises = sessionCards.map(async (c) => {
-      const rating = ratingsMap[c.id] || 'good'
+    const ratedCards = sessionCards.filter((c) => ratingsMap[c.id])
+    if (ratedCards.length === 0) {
+      pushToast('No cards were rated, so this session was not saved.', 'info')
+      return
+    }
+    const updatePromises = ratedCards.map(async (c) => {
+      const rating = ratingsMap[c.id]
       const patch = computeNextReview(c, rating, todayStr)
       const { data, error } = await supabase
         .from('cards')
@@ -2142,6 +2281,14 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
     })
 
     const updatedCards = await Promise.all(updatePromises)
+    recordStudyMinutes(Math.max(1, Math.round(ratedCards.length * 1.5)), 'session')
+    setStudyActivity((previous) => {
+      const day = ymd(new Date())
+      const current = previous[day] || { minutes: 0, sessions: 0, cardsReviewed: 0, xp: 0 }
+      const next = { ...previous, [day]: { ...current, cardsReviewed: (current.cardsReviewed || 0) + ratedCards.length, xp: (current.xp || 0) + earnedXp } }
+      try { localStorage.setItem('kayapp-study-activity', JSON.stringify(next)) } catch { /* ignore */ }
+      return next
+    })
 
     const nextXp = (Number(deck.xp_awarded) || 0) + earnedXp
     await supabase
@@ -2154,8 +2301,9 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
       .eq('id', deck.id)
 
     const updatedMap = new Map(updatedCards.map((c) => [c.id, c]))
+    setCards((prev) => prev.map((c) => updatedMap.get(c.id) || c))
+    // Use the latest component snapshot plus the saved updates to check deck mastery.
     const nextAllCards = cards.map((c) => updatedMap.get(c.id) || c)
-    setCards(nextAllCards)
     setDecks((prev) =>
       prev.map((d) =>
         d.id === deck.id
@@ -2209,17 +2357,26 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
     const clean = renameListValue.trim()
     setRenamingList('')
     if (!clean || clean === oldName) return
+    if (allBoardLists.some((name) => name.toLowerCase() === clean.toLowerCase() && name !== oldName)) {
+      pushToast('A list with that name already exists.', 'error')
+      return
+    }
+    const affected = tasks.filter((tk) => getTaskBoardList(tk) === oldName)
+    try {
+      for (const tk of affected) {
+        const updatedNotes = setTaskBoardListNotes(tk.notes, clean)
+        const { error } = await supabase.from('tasks').update({ notes: updatedNotes }).eq('id', tk.id)
+        if (error) throw error
+      }
+    } catch (error) {
+      pushToast('Could not rename the list. Please try again.', 'error')
+      return
+    }
     setCustomBoardLists((prev) => {
       const next = prev.map((n) => (n === oldName ? clean : n))
-      if (!next.includes(clean)) next.push(clean)
       try { localStorage.setItem('kayapp-board-lists', JSON.stringify(next)) } catch { /* ignore */ }
       return next
     })
-    const affected = tasks.filter((tk) => getTaskBoardList(tk) === oldName)
-    for (const tk of affected) {
-      const updatedNotes = setTaskBoardListNotes(tk.notes, clean)
-      await supabase.from('tasks').update({ notes: updatedNotes }).eq('id', tk.id)
-    }
     setTasks((prev) =>
       prev.map((tk) =>
         getTaskBoardList(tk) === oldName ? { ...tk, notes: setTaskBoardListNotes(tk.notes, clean) } : tk,
@@ -2276,12 +2433,12 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
     }
   }
 
-  const toggleTask = async (task) => {
-    const nextDone = !task.is_done
+  const toggleTask = async (task, { silent = false } = {}) => {
     const currentList = getTaskBoardList(task)
+    const nextDone = !(task.is_done || isCompletedListName(currentList))
     let targetList = currentList
-    if (nextDone && allBoardLists.includes('Completed')) {
-      targetList = 'Completed'
+    if (nextDone && allBoardLists.some(isCompletedListName)) {
+      targetList = allBoardLists.find(isCompletedListName)
     } else if (!nextDone && isCompletedListName(currentList) && allBoardLists.length > 0) {
       targetList = allBoardLists.find((l) => !isCompletedListName(l)) || allBoardLists[0]
     }
@@ -2296,9 +2453,10 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
         .update({ is_done: nextDone, notes: updatedNotes })
         .eq('id', task.id)
       if (error) throw error
-      if (nextDone) pushToast('Task completed! +5 XP points.', 'success')
+      if (nextDone && !silent) pushToast('Task completed! +5 XP points.', 'success')
     } catch (err) {
       setTasks((prev) => prev.map((x) => (x.id === task.id ? task : x)))
+      if (!silent) pushToast('Could not update this task. Please try again.', 'error')
     }
   }
 
@@ -2359,13 +2517,128 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
     }
     const nextVal = !tp.is_mastered
     setTopics((prev) => prev.map((x) => (x.id === id ? { ...x, is_mastered: nextVal } : x)))
-    await supabase.from('topics').update({ is_mastered: nextVal }).eq('id', id)
-    if (nextVal) pushToast(`Mastered "${tp.title}"! +25 XP points.`, 'success')
+    try {
+      const { error } = await supabase.from('topics').update({ is_mastered: nextVal }).eq('id', id)
+      if (error) throw error
+      if (nextVal) pushToast(`Mastered "${tp.title}"! +25 XP points.`, 'success')
+    } catch (error) {
+      setTopics((prev) => prev.map((x) => (x.id === id ? { ...x, is_mastered: tp.is_mastered } : x)))
+      pushToast('Could not update topic progress. Please try again.', 'error')
+    }
   }
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     navigate('/')
+  }
+
+  const recordStudyMinutes = async (minutesToAdd, source = 'study') => {
+    const amount = Math.max(0, Math.round(Number(minutesToAdd) || 0))
+    if (!amount) return
+    const day = ymd(new Date())
+    setStudyActivity((previous) => {
+      const current = previous[day] || { minutes: 0, sessions: 0, cardsReviewed: 0, xp: 0 }
+      const next = { ...previous, [day]: { ...current, minutes: (current.minutes || 0) + amount, sessions: (current.sessions || 0) + 1 } }
+      try { localStorage.setItem('kayapp-study-activity', JSON.stringify(next)) } catch {}
+      return next
+    })
+    setStudyMinutesToday((value) => value + amount)
+    if (session?.user?.id) {
+      const { error } = await supabase.from('kayapp_study_sessions').insert({ user_id: session.user.id, studied_on: day, duration_minutes: amount, session_type: source, topic_id: focusLinkedTopic || null })
+      if (error) {
+        console.error('Study activity sync failed:', error)
+        pushToast('Study time saved on this device, but database sync failed. Check the SQL migration.', 'error')
+      }
+    }
+  }
+
+
+  const exportDeckAsCsv = (deck) => {
+    const deckCards = cardsByDeck[deck.id] || []
+    if (!deckCards.length) return pushToast('This deck has no cards to export.', 'error')
+    const escapeCsv = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`
+    const rows = [['Question', 'Answer', 'Key points', 'Due date'], ...deckCards.map((c) => [c.prompt, c.answer, Array.isArray(c.key_points) ? c.key_points.join('; ') : c.key_points || '', c.due_date || ''])]
+    const csv = rows.map((row) => row.map(escapeCsv).join(',')).join('\r\n')
+    const blob = new Blob(['\ufeff', csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${(deck.title || 'kayapp-deck').replace(/[^a-z0-9-_]+/gi, '-').toLowerCase()}.csv`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+    pushToast('Deck exported as CSV.', 'success')
+  }
+
+  const importDeckCsv = async (event, deck) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file || !deck?.id) return
+    try {
+      const textContent = await file.text()
+      const lines = textContent.replace(/^\uFEFF/, '').split(/\r?\n/).filter((line) => line.trim())
+      const parseLine = (line) => {
+        const cells = []
+        let current = ''
+        let quoted = false
+        for (let i = 0; i < line.length; i += 1) {
+          const char = line[i]
+          if (char === '"' && quoted && line[i + 1] === '"') { current += '"'; i += 1 }
+          else if (char === '"') quoted = !quoted
+          else if (char === ',' && !quoted) { cells.push(current); current = '' }
+          else current += char
+        }
+        cells.push(current)
+        return cells
+      }
+      const parsed = lines.map(parseLine)
+      const first = parsed[0]?.map((cell) => cell.trim().toLowerCase()) || []
+      const hasHeader = first.includes('question') || first.includes('prompt') || first.includes('answer')
+      const rows = parsed.slice(hasHeader ? 1 : 0).map((cells) => ({ prompt: (cells[0] || '').trim(), answer: (cells[1] || '').trim(), key_points: (cells[2] || '').split(/[;|]/).map((x) => x.trim()).filter(Boolean), deck_id: deck.id, user_id: session.user.id })).filter((row) => row.prompt && row.answer)
+      if (!rows.length) return pushToast('No valid question-and-answer rows found. Use CSV columns Question, Answer, Key points, Due date.', 'error')
+      const { data, error } = await supabase.from('cards').insert(rows).select()
+      if (error) throw error
+      setCards((previous) => [...previous, ...(data || [])])
+      pushToast(`Imported ${data?.length || rows.length} flashcard(s).`, 'success')
+    } catch (error) {
+      pushToast('Could not import this CSV. Check its columns and your database permissions.', 'error')
+    }
+  }
+
+  const saveEditedCard = async (event) => {
+    event.preventDefault()
+    if (!cardEditor?.deck_id || !cardEditor.prompt?.trim() || !cardEditor.answer?.trim()) return
+    setCardEditorBusy(true)
+    try {
+      const patch = { prompt: cardEditor.prompt.trim(), answer: cardEditor.answer.trim(), key_points: String(cardEditor.key_points_text || '').split(/[,\n;]/).map((v) => v.trim()).filter(Boolean) }
+      const request = cardEditor.id
+        ? supabase.from('cards').update(patch).eq('id', cardEditor.id).select().single()
+        : supabase.from('cards').insert([{ ...patch, deck_id: cardEditor.deck_id, user_id: session.user.id }]).select().single()
+      const { data, error } = await request
+      if (error) throw error
+      setCards((previous) => cardEditor.id ? previous.map((card) => card.id === data.id ? { ...card, ...data } : card) : [...previous, data])
+      setCardEditor(null)
+      pushToast(cardEditor.id ? 'Flashcard updated.' : 'Flashcard added.', 'success')
+    } catch (error) {
+      pushToast('Could not save this card. Check your cards table columns and permissions, then try again.', 'error')
+    } finally {
+      setCardEditorBusy(false)
+    }
+  }
+
+  const permanentlyDeleteCard = async () => {
+    if (!cardDeleteTarget) return
+    const target = cardDeleteTarget
+    setCardDeleteTarget(null)
+    try {
+      const { error } = await supabase.from('cards').delete().eq('id', target.id)
+      if (error) throw error
+      setCards((previous) => previous.filter((card) => card.id !== target.id))
+      pushToast('Flashcard permanently deleted.', 'success')
+    } catch (error) {
+      pushToast('Could not delete this flashcard.', 'error')
+    }
   }
 
   const renderSubjectBadge = (subId) => {
@@ -2391,9 +2664,9 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <button
             type="button"
-            onClick={() => toggleTask(task)}
+            onClick={(e) => { e.stopPropagation(); toggleTask(task) }}
             aria-label={task.is_done ? `Mark "${task.title}" as undone` : `Mark "${task.title}" as done`}
-            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border transition ${
+            className={`flex h-7 w-7 sm:h-6 sm:w-6 shrink-0 items-center justify-center rounded-full border-2 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F5B82E] ${
               task.is_done
                 ? 'border-[#173761] bg-[#173761] text-[#F5B82E]'
                 : darkMode
@@ -2409,7 +2682,7 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
             </p>
             <div className={`mt-1 flex flex-wrap items-center gap-2 text-xs ${t.muted}`}>
               {renderSubjectBadge(task.subject_id)}
-              {listName && <span className="rounded bg-slate-200/70 px-1.5 py-0.5 text-[10px] font-bold dark:bg-white/10">{listName}</span>}
+              {listName && <span className="rounded bg-slate-200/70 px-1.5 py-0.5 text-xs font-bold dark:bg-white/10">{listName}</span>}
               {task.due_date && <span>{task.due_date === today ? 'Today' : fmtFullDate(task.due_date)}</span>}
               {overdue && <span className={`font-semibold ${t.danger}`}>Overdue</span>}
             </div>
@@ -2445,13 +2718,23 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
       mins: minutes[id] ?? 30,
     }))
 
+    const activeStreak = (() => {
+      let count = 0
+      const cursor = new Date()
+      const todayActivity = studyActivity[ymd(cursor)]
+      if (!todayActivity && cursor.toDateString() === new Date().toDateString()) cursor.setDate(cursor.getDate() - 1)
+      while (count < 365) {
+        const key = ymd(cursor)
+        if (!studyActivity[key] || (!studyActivity[key].minutes && !studyActivity[key].sessions)) break
+        count += 1
+        cursor.setDate(cursor.getDate() - 1)
+      }
+      return count
+    })()
+
     return (
-      <div className="space-y-6">
-        {!decksTableReady && (
-          <div className="rounded-xl border border-[#EBDDB0] bg-[#FFF8E3] p-4 text-xs font-semibold text-[#8A5F0B]">
-            Database upgrade required: Run the new <code>decks</code> and <code>cards</code> SQL script in your Supabase SQL Editor so your uploaded reviewers and spaced repetition cards can be saved.
-          </div>
-        )}
+      <div className="mx-auto w-full max-w-[1440px] space-y-6">
+
 
         {/* 1. Hero Banner */}
         <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#173761] via-[#1B3F6E] to-[#132C4E] p-6 text-white shadow-[0_20px_50px_-24px_rgba(23,55,97,0.75)] sm:p-8">
@@ -2537,6 +2820,44 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
             <HeroBookIllustration />
           </div>
         </section>
+
+        {/* Study tools follow the greeting hero so the welcome card is always first. */}
+        <section className={`grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-4`}>
+          <div className={`rounded-2xl border p-4 ${t.card}`}>
+            <div className="flex items-center justify-between gap-2"><p className={`text-xs font-semibold ${t.muted}`}>Study streak</p><span className="text-lg" aria-hidden="true">✦</span></div>
+            <p className="mt-2 text-2xl font-extrabold">{activeStreak} day{activeStreak === 1 ? '' : 's'}</p>
+            <p className={`mt-1 text-xs ${t.muted}`}>Based on locally recorded study activity</p>
+          </div>
+          <div className={`rounded-2xl border p-4 ${t.card}`}>
+            <div className="flex items-center justify-between gap-2"><p className={`text-xs font-semibold ${t.muted}`}>Daily study goal</p><label className="sr-only" htmlFor="kayapp-daily-goal">Daily goal in minutes</label><select id="kayapp-daily-goal" value={dailyGoal} onChange={(e) => { saveDailyGoal(e.target.value) }} className={`rounded-lg border px-2 py-1 text-xs ${t.input}`}><option value={15}>15 min</option><option value={20}>20 min</option><option value={25}>25 min</option><option value={30}>30 min</option><option value={45}>45 min</option><option value={60}>60 min</option></select></div>
+            <p className="mt-2 text-2xl font-extrabold">{studyMinutesToday}/{dailyGoal} min</p>
+            <div className={`mt-2 h-2 overflow-hidden rounded-full ${t.track}`}><div className="h-full rounded-full bg-[#F5B82E] transition-all" style={{ width: `${Math.min(100, pct(studyMinutesToday, dailyGoal))}%` }} /></div>
+          </div>
+          <div className={`rounded-2xl border p-4 ${t.card}`}>
+            <p className={`text-xs font-semibold ${t.muted}`}>Focus timer</p>
+            <p className="mt-2 text-2xl font-extrabold tabular-nums">{String(Math.floor(focusSecondsLeft / 60)).padStart(2, '0')}:{String(focusSecondsLeft % 60).padStart(2, '0')}</p>
+            <div className="mt-2 flex flex-wrap gap-2"><select aria-label="Focus timer topic" value={focusLinkedTopic} onChange={(e) => setFocusLinkedTopic(e.target.value)} className={`min-w-0 flex-1 rounded-lg border px-2 py-1.5 text-xs ${t.input}`}><option value="">No topic linked</option>{visibleTopics.map((topic) => <option key={topic.id} value={topic.id}>{topic.title}</option>)}</select><button type="button" onClick={() => setFocusRunning((v) => !v)} className={t.btn}>{focusRunning ? 'Pause' : 'Start'}</button><button type="button" onClick={() => { setFocusRunning(false); setFocusSecondsLeft(focusMinutes * 60) }} className={t.btnSecondary} aria-label="Reset focus timer"><RotateCcw size={13}/></button><button type="button" onClick={openFloatingTimer} className={t.btnSecondary} title="Open floating timer" aria-label="Open floating timer">Pop out</button></div>
+            <div role="group" aria-label="Focus duration" className={`mt-3 grid grid-cols-3 gap-1.5 rounded-xl border p-1.5 ${darkMode ? 'border-white/10 bg-slate-950/40' : 'border-[#E7E4DA] bg-[#F7F6F1]'}`}>
+              {[15, 25, 50].map((mins) => (
+                <button key={mins} type="button" aria-pressed={focusMinutes === mins}
+                  onClick={() => { setFocusMinutes(mins); setFocusRunning(false); setFocusSecondsLeft(mins * 60) }}
+                  className={`min-h-10 min-w-0 rounded-lg px-2 py-2 text-xs font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5B82E] ${focusMinutes === mins ? 'bg-[#173761] text-white shadow-md ring-1 ring-[#F5B82E]/70' : darkMode ? 'text-slate-300 hover:bg-white/10' : 'text-[#526176] hover:bg-white hover:text-[#173761]'}`}>
+                  <span className="block text-sm">{mins}</span><span className="block text-[11px] font-semibold opacity-80">minutes</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className={`rounded-2xl border p-4 ${t.card}`}>
+            <p className={`text-xs font-semibold ${t.muted}`}>Quick actions</p>
+            <div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={() => goTo('plan')} className={t.btnSecondary}>Open planner</button><button type="button" onClick={() => setUploadWizardOpen(true)} className={t.btn}>Add reviewer</button></div>
+            <p className={`mt-2 text-xs ${t.muted}`}>Stay consistent, one session at a time.</p>
+          </div>
+        </section>
+        {!decksTableReady && (
+          <div className="rounded-xl border border-[#EBDDB0] bg-[#FFF8E3] p-4 text-xs font-semibold text-[#8A5F0B]">
+            Database upgrade required: Run the new <code>decks</code> and <code>cards</code> SQL script in your Supabase SQL Editor so your uploaded reviewers and spaced repetition cards can be saved.
+          </div>
+        )}
 
         {/* 2. Middle Row: Decks to Review & Today's Deadlines */}
         <div className="grid gap-6 md:grid-cols-2">
@@ -2997,6 +3318,8 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
                             +{d.xp_awarded || 0} XP pts earned
                           </span>
                         </div>
+                        <button type="button" onClick={() => setDeckDetail(d)} title={`Manage cards in ${d.title}`} aria-label={`Manage cards in ${d.title}`} className={t.ghost}><FileEdit size={15} /></button>
+                        <button type="button" onClick={() => exportDeckAsCsv(d)} title="Export deck as CSV" aria-label={`Export ${d.title} as CSV`} className={t.ghost}><FileText size={15} /></button>
                         <button
                           type="button"
                           onClick={() => toggleArchiveDeck(d.id)}
@@ -3303,6 +3626,31 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
           </div>
         </section>
 
+        <section className={`rounded-2xl border p-4 ${t.card}`}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <button type="button" onClick={() => setCalendarExpanded((expanded) => !expanded)} aria-expanded={calendarExpanded} className={`flex min-w-0 flex-1 items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F5B82E] ${darkMode ? 'border-slate-700 bg-slate-800/70 hover:border-[#F5B82E]' : 'border-[#E8DFC9] bg-[#FFFCF4] hover:border-[#D9B65A]'}`}>
+              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${darkMode ? 'bg-white/5' : 'bg-[#FFF0C2]'} text-[#B78116]`}><CalendarDays size={18}/></span>
+              <span className="min-w-0 flex-1"><span className="block text-base font-extrabold">Deadline calendar</span><span className={`block text-xs ${t.muted}`}>{calendarExpanded ? 'Select a date to see its scheduled tasks.' : 'Calendar is hidden. Expand to view deadlines.'}</span></span>
+              <span className={`inline-flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-extrabold ${calendarExpanded ? 'bg-[#173761] text-white' : 'bg-[#F5B82E] text-[#173761]'}`}>{calendarExpanded ? 'Hide' : 'Show'} <ChevronRight size={14} className={`transition-transform ${calendarExpanded ? 'rotate-90' : ''}`}/></span>
+            </button>
+            {calendarExpanded && <div className="flex items-center gap-2"><button type="button" aria-label="Previous month" onClick={() => setCalendarMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))} className={t.btnSecondary}><ChevronRight className="rotate-180" size={15}/></button><span className="min-w-28 text-center text-sm font-bold sm:min-w-32">{calendarMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span><button type="button" aria-label="Next month" onClick={() => setCalendarMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))} className={t.btnSecondary}><ChevronRight size={15}/></button></div>}
+          </div>
+          {calendarExpanded && <div className="mt-4">
+          <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+            {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((day) => <div key={day} className={`py-1 text-center text-xs font-bold ${t.muted}`}>{day}</div>)}
+            {Array.from({ length: new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1).getDay() }, (_, i) => <div key={`blank-${i}`} />)}
+            {Array.from({ length: new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0).getDate() }, (_, i) => {
+              const date = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), i + 1)
+              const key = ymd(date)
+              const hasTasks = activeTasks.some((task) => task.due_date === key)
+              const isSelected = calendarDate === key
+              return <button key={key} type="button" onClick={() => setCalendarDate(key)} aria-pressed={isSelected} className={`relative min-h-11 rounded-lg border text-xs font-semibold transition sm:min-h-11 ${isSelected ? 'border-[#173761] bg-[#173761] text-white' : key === today ? 'border-[#F5B82E] bg-[#F5B82E]/15' : `${t.panel} hover:border-[#F5B82E]`}`}>{i + 1}{hasTasks && <span className={`absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full ${isSelected ? 'bg-[#F5B82E]' : 'bg-[#B78116]'}`} />}</button>
+            })}
+          </div>
+          <div className={`mt-4 rounded-xl border p-3 ${t.panel}`}><p className="text-sm font-bold">{fmtFullDate(calendarDate)}</p>{activeTasks.filter((task) => task.due_date === calendarDate).length ? <ul className="mt-2 space-y-2">{activeTasks.filter((task) => task.due_date === calendarDate).map((task) => <li key={task.id} className="flex items-center gap-2 text-xs"><span className={`h-2 w-2 rounded-full ${task.is_done ? 'bg-emerald-500' : 'bg-[#F5B82E]'}`} /><span className={task.is_done ? 'line-through opacity-60' : ''}>{task.title}</span></li>)}</ul> : <p className={`mt-1 text-xs ${t.muted}`}>No tasks scheduled for this date.</p>}</div>
+          </div>}
+        </section>
+
         {/* 2. Filter & Search Bar (`All subjects`, `Due date`, `Search tasks...`) */}
         <section className={`rounded-2xl border p-3 ${t.card}`}>
           <div className="grid gap-2.5 sm:grid-cols-[170px_160px_1fr]">
@@ -3404,7 +3752,9 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
             </button>
           </section>
         ) : (
-          <div className="flex snap-x snap-mandatory items-start gap-4 overflow-x-auto pb-4 pt-1">
+          <>
+          {selectedTaskIds.length > 0 && <div className={`sticky top-2 z-20 flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3 shadow-lg sm:p-4 ${t.card}`}><div><span className="block text-sm font-extrabold">{selectedTaskIds.length} task{selectedTaskIds.length === 1 ? '' : 's'} selected</span><span className={`text-xs ${t.muted}`}>Apply an action to all selected tasks.</span></div><div className="flex flex-wrap gap-2"><button type="button" className={t.btnSecondary} onClick={() => setSelectedTaskIds([])}>Clear selection</button><button type="button" disabled={bulkActionBusy} className={t.btnSecondary} onClick={() => { const selected = activeTasks.filter((task) => selectedTaskIds.includes(task.id)); if (!selected.length) return; const ids = new Set(selected.map((task) => String(task.id))); const next = [...archivedTaskIds.filter((id, index, arr) => arr.findIndex((x) => String(x) === String(id)) === index), ...selected.map((task) => task.id).filter((id) => !archivedTaskIds.some((old) => String(old) === String(id)))]; setArchivedTaskIds(next); try { localStorage.setItem('kayapp-archived-tasks', JSON.stringify(next)) } catch {} setSelectedTaskIds([]); pushToast(`Archived ${selected.length} task${selected.length === 1 ? '' : 's'}.`, 'success') }}><Archive size={14}/>{bulkActionBusy ? 'Working…' : 'Archive selected'}</button><button type="button" disabled={bulkActionBusy} className={t.btn} onClick={async () => { const selected = activeTasks.filter((task) => selectedTaskIds.includes(task.id)); if (!selected.length) return; setBulkActionBusy(true); let succeeded = 0; try { for (const task of selected) { await toggleTask(task, { silent: true }); succeeded += 1 } setSelectedTaskIds([]); pushToast(`Updated ${succeeded} selected task${succeeded === 1 ? '' : 's'}.`, 'success') } finally { setBulkActionBusy(false) } }}>{bulkActionBusy ? 'Updating…' : 'Toggle completion'}</button></div></div>}
+          <div className="flex flex-col items-stretch gap-3 pb-4 pt-1 sm:flex-row sm:items-start sm:gap-4 sm:overflow-x-auto sm:snap-x sm:snap-mandatory">
             {allBoardLists.map((listName) => {
               if (mobileActiveList !== 'all' && mobileActiveList !== listName) {
                 return null
@@ -3428,7 +3778,7 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
                     }
                     setDraggingTaskId(null)
                   }}
-                  className={`flex max-h-[640px] w-[88vw] shrink-0 snap-center flex-col rounded-2xl border p-4 sm:w-[295px] ${t.card}`}
+                  className={`flex max-h-[min(72dvh,720px)] w-full min-w-0 flex-col rounded-2xl border p-3 shadow-sm sm:w-[295px] sm:min-w-[295px] sm:shrink-0 sm:snap-start sm:p-4 ${t.card}`}
                 >
                   {/* Column Header */}
                   <div className="relative flex shrink-0 items-center justify-between gap-2 pb-3.5">
@@ -3466,7 +3816,9 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
                         {listTasks.length}
                       </span>
 
+                      {listTasks.length > 0 && <button type="button" aria-pressed={listTasks.every((task) => selectedTaskIds.includes(task.id))} onClick={() => setSelectedTaskIds((prev) => listTasks.every((task) => prev.includes(task.id)) ? prev.filter((id) => !listTasks.some((task) => task.id === id)) : Array.from(new Set([...prev, ...listTasks.map((task) => task.id)])))} className={`inline-flex min-h-8 items-center gap-1.5 rounded-lg border px-2.5 text-[11px] font-bold transition ${listTasks.every((task) => selectedTaskIds.includes(task.id)) ? 'border-[#173761] bg-[#173761] text-white' : `${t.panel} ${t.muted} hover:border-[#F5B82E] hover:text-[#173761]`}`} title={`Select all tasks in ${listName}`}><CheckSquare size={13}/>{listTasks.every((task) => selectedTaskIds.includes(task.id)) ? 'Selected' : 'Select all'}</button>}
                       <button
+                        data-kayapp-menu
                         type="button"
                         onClick={() => setOpenListMenu(menuOpenHere ? '' : listName)}
                         aria-label={`Options for ${listName}`}
@@ -3479,6 +3831,7 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
                     {/* List Dropdown Menu (Rename or Archive List -> Disappears!) */}
                     {menuOpenHere && (
                       <div
+                        data-kayapp-menu
                         className={`absolute right-0 top-9 z-30 w-44 rounded-xl border p-1.5 shadow-xl ${t.card}`}
                       >
                         <button
@@ -3540,21 +3893,24 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
                             {/* Top Row: Left Grip/Check + Badges + Right 3-Dot Menu */}
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex flex-wrap items-center gap-1.5">
-                                {isDoneCard ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => toggleTask(tk)}
-                                    title="Mark as incomplete"
-                                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white"
-                                  >
-                                    <Check size={12} strokeWidth={3} />
-                                  </button>
-                                ) : (
-                                  <GripVertical
-                                    size={14}
-                                    className="shrink-0 text-slate-300 dark:text-slate-600"
-                                  />
-                                )}
+                                <input type="checkbox" aria-label={`Select ${tk.title}`} checked={selectedTaskIds.includes(tk.id)} onChange={(e) => setSelectedTaskIds((prev) => e.target.checked ? [...prev, tk.id] : prev.filter((id) => id !== tk.id))} onClick={(e) => e.stopPropagation()} className="h-4 w-4 accent-[#173761]" />
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); toggleTask(tk) }}
+                                  title={isDoneCard ? 'Mark as incomplete' : 'Mark as completed'}
+                                  aria-label={isDoneCard ? `Mark "${tk.title}" as incomplete` : `Mark "${tk.title}" as completed`}
+                                  aria-pressed={Boolean(isDoneCard)}
+                                  className={`flex h-6 w-6 min-h-6 min-w-6 shrink-0 items-center justify-center rounded-full border-2 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F5B82E] ${
+                                    isDoneCard
+                                      ? 'border-emerald-500 bg-emerald-500 text-white'
+                                      : darkMode
+                                      ? 'border-slate-500 bg-transparent text-transparent hover:border-[#F5B82E]'
+                                      : 'border-[#C9D5E3] bg-white text-transparent hover:border-[#173761]'
+                                  }`}
+                                >
+                                  {isDoneCard && <Check size={13} strokeWidth={3} />}
+                                </button>
+                                <GripVertical size={14} aria-hidden="true" className="shrink-0 cursor-grab text-slate-300 dark:text-slate-600" />
 
                                 {renderSubjectBadge(tk.subject_id)}
 
@@ -3566,10 +3922,11 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
                               </div>
 
                               <button
+                                data-kayapp-menu
                                 type="button"
                                 onClick={() => setOpenTaskMenuId(taskMenuOpen ? '' : tk.id)}
                                 aria-label={`Task options for ${tk.title}`}
-                                className="rounded p-1 text-slate-400 hover:bg-slate-500/10 hover:text-current"
+                                className="min-h-8 min-w-8 rounded p-1 text-slate-400 hover:bg-slate-500/10 hover:text-current focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F5B82E]"
                               >
                                 <MoreVertical size={14} />
                               </button>
@@ -3578,6 +3935,7 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
                             {/* Task Dropdown Menu (Move to list, Complete, Archive) */}
                             {taskMenuOpen && (
                               <div
+                                data-kayapp-menu
                                 className={`absolute right-2 top-9 z-30 w-44 rounded-xl border p-1.5 shadow-xl ${t.card}`}
                               >
                                 <button
@@ -3788,6 +4146,7 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
               </aside>
             )}
           </div>
+          </>
         )}
       </div>
     )
@@ -3819,6 +4178,12 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
         </div>
       </section>
 
+      <section className={`rounded-2xl border p-5 ${t.card}`}>
+        <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="text-base font-bold">Your last 7 days</h3><p className={`text-xs ${t.muted}`}>Study minutes recorded on this device.</p></div><span className={`text-xs ${t.muted}`}>Local activity history</span></div>
+        <div className="mt-5 grid grid-cols-7 items-end gap-2 sm:gap-3" aria-label="Study minutes chart for the last seven days">
+          {Array.from({ length: 7 }, (_, index) => { const date = new Date(); date.setDate(date.getDate() - (6 - index)); const key = ymd(date); const mins = Number(studyActivity[key]?.minutes || 0); const max = Math.max(30, ...Array.from({ length: 7 }, (_, offset) => { const d = new Date(); d.setDate(d.getDate() - offset); return Number(studyActivity[ymd(d)]?.minutes || 0) })); return <div key={key} className="flex min-w-0 flex-col items-center gap-2"><span className={`text-[11px] font-semibold ${t.muted}`}>{mins}m</span><div className={`flex h-28 w-full items-end overflow-hidden rounded-lg ${t.track}`}><div className="w-full rounded-t-md bg-[#F5B82E] transition-all" style={{ height: `${mins ? Math.max(5, mins / max * 100) : 2}%` }} /></div><span className={`text-[11px] ${t.muted}`}>{date.toLocaleDateString('en-US', { weekday: 'short' })}</span></div> })}
+        </div>
+      </section>
       <div className="grid gap-4 sm:grid-cols-3">
         <section className={`rounded-2xl border p-5 ${t.card}`}>
           <p className={`text-xs font-semibold ${t.muted}`}>Cards Remembered</p>
@@ -3895,10 +4260,63 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
       <div className="rounded-2xl border border-[#EBDDB0] bg-[#FFF8E3] px-5 py-3.5 text-xs font-semibold text-[#8A5F0B]">
         Safety Vault: Lists, tasks, decks, and subjects archived from your workspace are stored here. Restore them anytime or delete them permanently.
       </div>
+      {(() => {
+        const allKeys = [
+          ...archivedListNames.map((name) => `list:${name}`),
+          ...archivedTasks.map((item) => `task:${item.id}`),
+          ...archivedDecks.map((item) => `deck:${item.id}`),
+          ...archivedSubjects.map((item) => `subject:${item.id}`),
+          ...archivedTopicsList.map((item) => `topic:${item.id}`),
+        ]
+        const restoreSelected = () => {
+          const keys = [...selectedArchiveKeys].filter((key) => allKeys.includes(key))
+          if (!keys.length) return
+          const selectedLists = keys.filter((key) => key.startsWith('list:')).map((key) => key.slice(5))
+          const selectedTaskIdsFromKeys = keys.filter((key) => key.startsWith('task:')).map((key) => key.slice(5))
+          const selectedDeckIds = keys.filter((key) => key.startsWith('deck:')).map((key) => key.slice(5))
+          const selectedSubjectIds = keys.filter((key) => key.startsWith('subject:')).map((key) => key.slice(8))
+          const selectedTopicIds = keys.filter((key) => key.startsWith('topic:')).map((key) => key.slice(6))
+          // Restoring a list also restores its contained tasks. Batch each category once
+          // so React state batching cannot drop earlier items or emit per-item toasts.
+          const listTaskIds = tasks.filter((task) => selectedLists.includes(getTaskBoardList(task))).map((task) => String(task.id))
+          const taskIdsToRestore = new Set([...selectedTaskIdsFromKeys, ...listTaskIds])
+          const nextLists = archivedListNames.filter((name) => !selectedLists.includes(name))
+          const nextTaskIds = archivedTaskIds.filter((id) => !taskIdsToRestore.has(String(id)))
+          const nextDeckIds = archivedDeckIds.filter((id) => !selectedDeckIds.includes(String(id)))
+          const nextSubjectIds = archivedSubjectIds.filter((id) => !selectedSubjectIds.includes(String(id)))
+          const nextTopicIds = archivedTopicIds.filter((id) => !selectedTopicIds.includes(String(id)))
+          bulkArchiveActionRef.current = true
+          setArchivedListNames(nextLists)
+          setArchivedTaskIds(nextTaskIds)
+          setArchivedDeckIds(nextDeckIds)
+          setArchivedSubjectIds(nextSubjectIds)
+          setArchivedTopicIds(nextTopicIds)
+          try {
+            localStorage.setItem('kayapp-archived-lists', JSON.stringify(nextLists))
+            localStorage.setItem('kayapp-archived-tasks', JSON.stringify(nextTaskIds))
+            localStorage.setItem('kayapp-archived-decks', JSON.stringify(nextDeckIds))
+            localStorage.setItem('kayapp-archived-subjects', JSON.stringify(nextSubjectIds))
+            localStorage.setItem('kayapp-archived-topics', JSON.stringify(nextTopicIds))
+          } catch { /* local persistence is best-effort */ }
+          setSelectedArchiveKeys([])
+          bulkArchiveActionRef.current = false
+          pushToast(`Restored ${keys.length} selected archived item${keys.length === 1 ? '' : 's'}.`, 'success')
+        }
+        return <section className={`sticky top-2 z-20 flex flex-col gap-3 rounded-2xl border p-3 shadow-md sm:flex-row sm:items-center sm:justify-between sm:p-4 ${t.card}`}>
+          <div className="flex items-center gap-3">
+            <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${darkMode ? 'bg-white/5' : 'bg-[#FFF4D6]'} text-[#B78116]`}><Archive size={17}/></span>
+            <div><p className="text-sm font-extrabold">Archive selection</p><p className={`text-xs ${t.muted}`}>{selectedArchiveKeys.filter((key) => allKeys.includes(key)).length} selected · use Select all in each category to bulk-select.</p></div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:flex">
+            <button type="button" onClick={() => setSelectedArchiveKeys([])} disabled={!selectedArchiveKeys.length} className={t.btnSecondary}>Clear selection</button>
+            <button type="button" onClick={restoreSelected} disabled={!selectedArchiveKeys.some((key) => allKeys.includes(key))} className={`${t.btn} disabled:cursor-not-allowed disabled:opacity-40`}><RotateCcw size={14}/> Restore selected</button>
+          </div>
+        </section>
+      })()}
 
       {/* 1. Archived Study Lists */}
       <section className={`rounded-2xl border p-6 ${t.card}`}>
-        <h2 className="text-base font-bold">Archived Study Lists ({archivedListNames.length})</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-base font-bold">Archived Study Lists ({archivedListNames.length})</h2><button type="button" disabled={!archivedListNames.length} onClick={() => { const keys = archivedListNames.map((name) => `list:${name}`); const all = keys.every((key) => selectedArchiveKeys.includes(key)); setSelectedArchiveKeys((prev) => all ? prev.filter((key) => !keys.includes(key)) : Array.from(new Set([...prev, ...keys]))) }} className={`${t.btnSecondary} h-9 px-3 disabled:opacity-40`}><CheckSquare size={14}/>{archivedListNames.length && archivedListNames.every((name) => selectedArchiveKeys.includes(`list:${name}`)) ? 'Deselect all' : 'Select all lists'}</button></div>
         {archivedListNames.length === 0 ? (
           <p className={`mt-3 text-xs ${t.muted}`}>No archived study lists.</p>
         ) : (
@@ -3907,12 +4325,8 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
               const countInList = tasks.filter((tk) => getTaskBoardList(tk) === lName).length
               return (
                 <li key={lName} className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3.5 ${t.row}`}>
-                  <div>
-                    <span className="rounded bg-[#173761] px-2 py-0.5 text-[10px] font-bold uppercase text-[#F5B82E]">
-                      Study List
-                    </span>
-                    <p className="mt-1 text-sm font-bold">{lName}</p>
-                    <p className={`text-xs ${t.muted}`}>{countInList} task(s) inside</p>
+                  <div className="flex min-w-0 items-start gap-3"><input type="checkbox" aria-label={`Select archived list ${lName}`} checked={selectedArchiveKeys.includes(`list:${lName}`)} onChange={(e) => setSelectedArchiveKeys((prev) => e.target.checked ? [...new Set([...prev, `list:${lName}`])] : prev.filter((key) => key !== `list:${lName}`))} className="mt-1 h-4 w-4 shrink-0 accent-[#173761]" />
+                    <div className="min-w-0"><span className="rounded bg-[#173761] px-2 py-0.5 text-[10px] font-bold uppercase text-[#F5B82E]">Study List</span><p className="mt-1 break-words text-sm font-bold">{lName}</p><p className={`text-xs ${t.muted}`}>{countInList} task(s) inside</p></div>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -3939,20 +4353,20 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
 
       {/* 2. Archived Tasks */}
       <section className={`rounded-2xl border p-6 ${t.card}`}>
-        <h2 className="text-base font-bold">Archived Tasks ({archivedTasks.length})</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-base font-bold">Archived Tasks ({archivedTasks.length})</h2><button type="button" disabled={!archivedTasks.length} onClick={() => { const keys = archivedTasks.map((item) => `task:${item.id}`); const all = keys.every((key) => selectedArchiveKeys.includes(key)); setSelectedArchiveKeys((prev) => all ? prev.filter((key) => !keys.includes(key)) : Array.from(new Set([...prev, ...keys]))) }} className={`${t.btnSecondary} h-9 px-3 disabled:opacity-40`}><CheckSquare size={14}/>{archivedTasks.length && archivedTasks.every((item) => selectedArchiveKeys.includes(`task:${item.id}`)) ? 'Deselect all' : 'Select all tasks'}</button></div>
         {archivedTasks.length === 0 ? (
           <p className={`mt-3 text-xs ${t.muted}`}>No archived tasks.</p>
         ) : (
           <ul className="mt-4 space-y-2.5">
             {archivedTasks.map((tk) => (
               <li key={tk.id} className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3.5 ${t.row}`}>
-                <div>
-                  <p className="text-sm font-bold">{tk.title}</p>
+                <div className="flex min-w-0 items-start gap-3"><input type="checkbox" aria-label={`Select archived task ${tk.title}`} checked={selectedArchiveKeys.includes(`task:${tk.id}`)} onChange={(e) => setSelectedArchiveKeys((prev) => e.target.checked ? [...new Set([...prev, `task:${tk.id}`])] : prev.filter((key) => key !== `task:${tk.id}`))} className="mt-1 h-4 w-4 shrink-0 accent-[#173761]" />
+                  <div className="min-w-0"><p className="break-words text-sm font-bold">{tk.title}</p>
                   <p className={`text-xs ${t.muted}`}>
                     List: {getTaskBoardList(tk)} {tk.due_date ? `· Due ${fmtFullDate(tk.due_date)}` : ''}
-                  </p>
+                  </p></div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     onClick={() => toggleArchiveTask(tk.id)}
@@ -3976,7 +4390,7 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
 
       {/* 3. Archived Decks */}
       <section className={`rounded-2xl border p-6 ${t.card}`}>
-        <h2 className="text-base font-bold">Archived Decks ({archivedDecks.length})</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-base font-bold">Archived Decks ({archivedDecks.length})</h2><button type="button" disabled={!archivedDecks.length} onClick={() => { const keys = archivedDecks.map((item) => `deck:${item.id}`); const all = keys.every((key) => selectedArchiveKeys.includes(key)); setSelectedArchiveKeys((prev) => all ? prev.filter((key) => !keys.includes(key)) : Array.from(new Set([...prev, ...keys]))) }} className={`${t.btnSecondary} h-9 px-3 disabled:opacity-40`}><CheckSquare size={14}/>{archivedDecks.length && archivedDecks.every((item) => selectedArchiveKeys.includes(`deck:${item.id}`)) ? 'Deselect all' : 'Select all decks'}</button></div>
         {archivedDecks.length === 0 ? (
           <p className={`mt-3 text-xs ${t.muted}`}>No archived decks.</p>
         ) : (
@@ -3985,13 +4399,10 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
               const dCards = cardsByDeck[d.id] || []
               return (
                 <li key={d.id} className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3.5 ${t.row}`}>
-                  <div>
-                    <p className="text-sm font-bold">{d.title}</p>
-                    <p className={`text-xs ${t.muted}`}>
-                      {dCards.length} cards · +{d.xp_awarded || 0} pts earned
-                    </p>
+                  <div className="flex min-w-0 items-start gap-3"><input type="checkbox" aria-label={`Select archived deck ${d.title}`} checked={selectedArchiveKeys.includes(`deck:${d.id}`)} onChange={(e) => setSelectedArchiveKeys((prev) => e.target.checked ? [...new Set([...prev, `deck:${d.id}`])] : prev.filter((key) => key !== `deck:${d.id}`))} className="mt-1 h-4 w-4 shrink-0 accent-[#173761]" />
+                    <div className="min-w-0"><p className="break-words text-sm font-bold">{d.title}</p><p className={`text-xs ${t.muted}`}>{dCards.length} cards · +{d.xp_awarded || 0} pts earned</p></div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
                       onClick={() => toggleArchiveDeck(d.id)}
@@ -4016,18 +4427,15 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
 
       {/* 4. Archived Subjects & Topics */}
       <section className={`rounded-2xl border p-6 ${t.card}`}>
-        <h2 className="text-base font-bold">
-          Archived Subjects ({archivedSubjects.length}) &amp; Topics ({archivedTopicsList.length})
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-base font-bold">Archived Subjects ({archivedSubjects.length}) &amp; Topics ({archivedTopicsList.length})</h2><div className="flex flex-wrap gap-2"><button type="button" disabled={!archivedSubjects.length} onClick={() => { const keys = archivedSubjects.map((item) => `subject:${item.id}`); const all = keys.every((key) => selectedArchiveKeys.includes(key)); setSelectedArchiveKeys((prev) => all ? prev.filter((key) => !keys.includes(key)) : Array.from(new Set([...prev, ...keys]))) }} className={`${t.btnSecondary} h-9 px-3 disabled:opacity-40`}><CheckSquare size={14}/>{archivedSubjects.length && archivedSubjects.every((item) => selectedArchiveKeys.includes(`subject:${item.id}`)) ? 'Deselect subjects' : 'Select all subjects'}</button><button type="button" disabled={!archivedTopicsList.length} onClick={() => { const keys = archivedTopicsList.map((item) => `topic:${item.id}`); const all = keys.every((key) => selectedArchiveKeys.includes(key)); setSelectedArchiveKeys((prev) => all ? prev.filter((key) => !keys.includes(key)) : Array.from(new Set([...prev, ...keys]))) }} className={`${t.btnSecondary} h-9 px-3 disabled:opacity-40`}><CheckSquare size={14}/>{archivedTopicsList.length && archivedTopicsList.every((item) => selectedArchiveKeys.includes(`topic:${item.id}`)) ? 'Deselect topics' : 'Select all topics'}</button></div></div>
         {archivedSubjects.length === 0 && archivedTopicsList.length === 0 ? (
           <p className={`mt-3 text-xs ${t.muted}`}>No archived subjects or topics.</p>
         ) : (
           <ul className="mt-4 space-y-2.5">
             {archivedSubjects.map((sub) => (
               <li key={sub.id} className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3.5 ${t.row}`}>
-                <div>
-                  <span className="rounded bg-[#173761] px-2 py-0.5 text-[10px] font-bold uppercase text-[#F5B82E]">Subject</span>
-                  <p className="mt-1 text-sm font-bold">{sub.name}</p>
+                <div className="flex min-w-0 items-start gap-3"><input type="checkbox" aria-label={`Select archived subject ${sub.name}`} checked={selectedArchiveKeys.includes(`subject:${sub.id}`)} onChange={(e) => setSelectedArchiveKeys((prev) => e.target.checked ? [...new Set([...prev, `subject:${sub.id}`])] : prev.filter((key) => key !== `subject:${sub.id}`))} className="mt-1 h-4 w-4 shrink-0 accent-[#173761]" />
+                  <div><span className="rounded bg-[#173761] px-2 py-0.5 text-[10px] font-bold uppercase text-[#F5B82E]">Subject</span><p className="mt-1 break-words text-sm font-bold">{sub.name}</p></div>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -4049,9 +4457,8 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
             ))}
             {archivedTopicsList.map((tp) => (
               <li key={tp.id} className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3.5 ${t.row}`}>
-                <div>
-                  <span className="rounded bg-[#FFF4D6] px-2 py-0.5 text-[10px] font-bold uppercase text-[#8A5F0B]">Topic</span>
-                  <p className="mt-1 text-sm font-bold">{tp.title}</p>
+                <div className="flex min-w-0 items-start gap-3"><input type="checkbox" aria-label={`Select archived topic ${tp.title}`} checked={selectedArchiveKeys.includes(`topic:${tp.id}`)} onChange={(e) => setSelectedArchiveKeys((prev) => e.target.checked ? [...new Set([...prev, `topic:${tp.id}`])] : prev.filter((key) => key !== `topic:${tp.id}`))} className="mt-1 h-4 w-4 shrink-0 accent-[#173761]" />
+                  <div><span className="rounded bg-[#FFF4D6] px-2 py-0.5 text-[10px] font-bold uppercase text-[#8A5F0B]">Topic</span><p className="mt-1 break-words text-sm font-bold">{tp.title}</p></div>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -4171,6 +4578,7 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
 
   return (
     <div className={`min-h-screen pb-16 md:pb-0 ${t.bg}`}>
+      {pipWindow && createPortal(<div className="wrap"><div className="brand">KAYAPP · FOCUS SESSION</div><div className="time">{String(Math.floor(focusSecondsLeft / 60)).padStart(2, '0')}:{String(focusSecondsLeft % 60).padStart(2, '0')}</div><div className="row"><button onClick={() => setFocusRunning((v) => !v)}>{focusRunning ? 'Pause' : 'Start'}</button><button className="secondary" onClick={() => { setFocusRunning(false); setFocusSecondsLeft(focusMinutes * 60) }}>Reset</button></div><div style={{marginTop:8,fontSize:11,opacity:.7}}>{focusLinkedTopic ? visibleTopics.find((x) => x.id === focusLinkedTopic)?.title || 'Linked topic' : 'No topic linked'}</div></div>, pipWindow.document.body)}
       <ToastRegion toasts={toasts} onDismiss={dismissToast} darkMode={darkMode} />
 
       <UploadReviewerWizard
@@ -4285,6 +4693,24 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
       </Modal>
 
       {/* Permanent Delete Confirmation Modal (Only triggered inside Archive) */}
+      <Modal isOpen={Boolean(deckDetail)} onClose={() => setDeckDetail(null)} title={deckDetail ? `Manage cards · ${deckDetail.title}` : 'Manage cards'} darkMode={darkMode} maxWidth="max-w-3xl">
+        {deckDetail && <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2"><p className={`text-sm ${t.muted}`}>{(cardsByDeck[deckDetail.id] || []).length} saved flashcards</p><div className="flex flex-wrap gap-2"><button type="button" onClick={() => exportDeckAsCsv(deckDetail)} className={t.btnSecondary}><FileText size={14}/> Export CSV</button><label className={`${t.btnSecondary} cursor-pointer`}><Upload size={14}/> Import CSV<input type="file" accept=".csv,text/csv" className="sr-only" onChange={(event) => importDeckCsv(event, deckDetail)} /></label><button type="button" onClick={() => setCardEditor({ deck_id: deckDetail.id, prompt: '', answer: '', key_points_text: '' })} className={t.btn}><Plus size={14}/> Add card</button></div></div>
+          <div className="max-h-[55dvh] space-y-2 overflow-y-auto pr-1">{(cardsByDeck[deckDetail.id] || []).map((card, index) => <article key={card.id} className={`rounded-xl border p-3 ${t.row}`}><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className={`text-xs font-bold ${t.gold}`}>Card {index + 1}</p><p className="mt-1 whitespace-pre-wrap text-sm font-semibold">{card.prompt}</p><p className={`mt-2 whitespace-pre-wrap text-xs ${t.muted}`}>{card.answer}</p></div><div className="flex shrink-0 gap-1"><button type="button" aria-label="Edit flashcard" onClick={() => setCardEditor({ ...card, deck_id: deckDetail.id, key_points_text: Array.isArray(card.key_points) ? card.key_points.join(', ') : String(card.key_points || '') })} className={t.ghost}><FileEdit size={15}/></button><button type="button" aria-label="Delete flashcard" onClick={() => setCardDeleteTarget(card)} className="rounded-lg p-2 text-red-500 hover:bg-red-500/10"><Trash2 size={15}/></button></div></div></article>)}{(cardsByDeck[deckDetail.id] || []).length === 0 && <p className={`rounded-xl border border-dashed p-6 text-center text-sm ${t.muted}`}>No cards yet. Add your first flashcard.</p>}</div>
+        </div>}
+      </Modal>
+      <Modal isOpen={Boolean(cardDeleteTarget)} onClose={() => setCardDeleteTarget(null)} title="Delete this flashcard?" darkMode={darkMode} maxWidth="max-w-md">
+        {cardDeleteTarget && <div className="space-y-4"><p className={`text-sm ${t.muted}`}>This permanently removes the selected card from its deck. This action cannot be undone.</p><div className={`rounded-xl border p-3 ${t.panel}`}><p className="text-sm font-bold">{cardDeleteTarget.prompt}</p><p className={`mt-1 text-xs ${t.muted}`}>{cardDeleteTarget.answer}</p></div><div className="flex justify-end gap-2"><button type="button" onClick={() => setCardDeleteTarget(null)} className={t.btnSecondary}>Cancel</button><button type="button" onClick={permanentlyDeleteCard} className="rounded-xl bg-red-600 px-4 py-2.5 text-xs font-bold text-white">Delete permanently</button></div></div>}
+      </Modal>
+      <Modal isOpen={Boolean(cardEditor)} onClose={() => !cardEditorBusy && setCardEditor(null)} title={cardEditor?.id ? 'Edit flashcard' : 'Add flashcard'} darkMode={darkMode} maxWidth="max-w-xl">
+        {cardEditor && <form onSubmit={saveEditedCard} className="space-y-4">
+          <label className="block text-sm font-semibold">Question<textarea required rows={3} value={cardEditor.prompt || ''} onChange={(e) => setCardEditor((current) => ({ ...current, prompt: e.target.value }))} className={`mt-1.5 w-full rounded-xl border p-3 text-sm ${t.input}`} /></label>
+          <label className="block text-sm font-semibold">Answer<textarea required rows={4} value={cardEditor.answer || ''} onChange={(e) => setCardEditor((current) => ({ ...current, answer: e.target.value }))} className={`mt-1.5 w-full rounded-xl border p-3 text-sm ${t.input}`} /></label>
+          <label className="block text-sm font-semibold">Key points <span className={`font-normal ${t.muted}`}>(separate with commas or new lines)</span><textarea rows={2} value={cardEditor.key_points_text || ''} onChange={(e) => setCardEditor((current) => ({ ...current, key_points_text: e.target.value }))} className={`mt-1.5 w-full rounded-xl border p-3 text-sm ${t.input}`} /></label>
+          <div className="flex flex-wrap justify-end gap-2"><button type="button" disabled={cardEditorBusy} onClick={() => setCardEditor(null)} className={t.btnSecondary}>Cancel</button><button type="submit" disabled={cardEditorBusy || !cardEditor.prompt?.trim() || !cardEditor.answer?.trim()} className={t.btn}>{cardEditorBusy ? 'Saving…' : 'Save changes'}</button></div>
+        </form>}
+      </Modal>
+
       <Modal
         isOpen={Boolean(permanentDeleteTarget)}
         onClose={() => setPermanentDeleteTarget(null)}
@@ -4623,7 +5049,7 @@ export default function Dashboard({ session, darkMode, onToggleTheme }) {
           </div>
         </header>
 
-        <main className={`mx-auto px-4 py-6 sm:px-8 sm:py-8 ${view === 'plan' ? 'max-w-[1440px]' : 'max-w-6xl'}`}>
+        <main className={`mx-auto px-3 pb-24 pt-4 sm:px-8 sm:py-8 sm:pb-8 ${view === 'plan' || view === 'today' ? 'max-w-[1440px]' : 'max-w-6xl'}`}>
           {loading ? (
             <div className="space-y-4">
               {[0, 1, 2].map((i) => (
