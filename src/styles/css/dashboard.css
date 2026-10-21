@@ -1,0 +1,93 @@
+:root {
+  --kay-navy: #173761;
+  --kay-navy-hover: #244B7D;
+  --kay-gold: #F5B82E;
+  --kay-gold-deep: #E6A51C;
+  --kay-gold-text: #B78116;
+  --kay-cream: #FAFAF7;
+}
+
+@keyframes kdIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes kdPop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.22); }
+  100% { transform: scale(1); }
+}
+
+@keyframes kdDrift {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(40px, 24px, 0); }
+}
+
+@keyframes pmPulse {
+  0% { box-shadow: 0 0 0 0 rgba(245, 184, 46, 0.55); }
+  70% { box-shadow: 0 0 0 10px rgba(245, 184, 46, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(245, 184, 46, 0); }
+}
+
+@keyframes pmShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+
+@keyframes pmPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+@keyframes kdShine {
+  from { transform: translateX(-120%); }
+  to { transform: translateX(220%); }
+}
+
+.kd-in { animation: kdIn 0.3s ease both; }
+.kd-pop { animation: kdPop 0.32s ease; }
+.kd-drift { animation: kdDrift 14s ease-in-out infinite alternate; }
+
+.kd-shine {
+  position: relative;
+  overflow: hidden;
+}
+.kd-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+.kd-shine:hover::after {
+  animation: kdShine 0.85s ease;
+}
+
+.pm-ready { animation: pmPulse 2s ease-out infinite; }
+.pm-shake { animation: pmShake 0.4s ease; }
+.pm-lit {
+  animation: pmPop 0.45s ease both;
+  box-shadow: 0 0 0 3px rgba(245, 184, 46, 0.75);
+}
+
+.kd-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kd-in,
+  .kd-pop,
+  .kd-drift,
+  .pm-ready,
+  .pm-shake,
+  .pm-lit,
+  .kd-shine:hover::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
