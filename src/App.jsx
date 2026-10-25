@@ -7,6 +7,7 @@ import LandingPage from './pages/LandingPage'
 import Dashboard from './pages/Dashboard'
 import AuthModal from './components/auth/AuthModal'
 import { supabase } from './lib/supabase'
+import AdminDashboard from './pages/AdminDashboard'
 
 function getSavedTheme() {
   try {
@@ -152,6 +153,22 @@ function App() {
                   darkMode={darkMode} 
                   onToggleTheme={toggleTheme} 
                 />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+
+          {/* Protected Admin Route */}
+          <Route
+            path="/admin"
+            element={
+              isAuthLoading ? (
+                <div className="flex min-h-screen items-center justify-center">
+                  <p className="text-lg font-bold">Loading Admin...</p>
+                </div>
+              ) : session ? (
+                <AdminDashboard session={session} darkMode={darkMode} />
               ) : (
                 <Navigate to="/" replace />
               )
