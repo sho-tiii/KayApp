@@ -286,7 +286,7 @@ function FeatureCard({ feature }) {
     <article
       onMouseMove={handleMove}
       onMouseLeave={handleLeave}
-      className="lp-tilt-card group relative h-full overflow-hidden rounded-xl border border-[#E7E9E5] bg-[#FAFAF7] p-6 hover:border-[#D6B75E] hover:bg-white hover:shadow-[0_20px_40px_-20px_rgba(23,55,97,0.3)]"
+      className="lp-tilt-card group relative h-full overflow-hidden rounded-xl border border-[#E7E9E5] bg-[#FAFAF7] p-6 hover:border-[#D6B75E] hover:bg-white hover:shadow-[0_20px_40px_-20px_rgba(23,55,97,0.3)] dark:border-[#2A3B51] dark:bg-[#111F33] dark:hover:border-[#D6B75E] dark:hover:bg-[#172840]"
     >
       <div
         aria-hidden="true"
@@ -295,17 +295,17 @@ function FeatureCard({ feature }) {
 
       <div className="relative">
         <div className="flex items-center justify-between">
-          <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#EAF0F7] text-[#173761] transition duration-300 group-hover:rotate-6 group-hover:bg-[#173761] group-hover:text-[#F5B82E]">
+          <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#EAF0F7] text-[#173761] transition duration-300 group-hover:rotate-6 group-hover:bg-[#173761] group-hover:text-[#F5B82E] dark:bg-[#172840] dark:text-slate-300">
             <Icon size={21} strokeWidth={1.8} />
           </div>
-          <span className="text-xs font-semibold text-slate-400 transition group-hover:text-[#B78116]">
+          <span className="text-xs font-semibold text-slate-400 transition group-hover:text-[#B78116] dark:text-slate-500">
             {feature.number}
           </span>
         </div>
 
         <h3 className="mt-6 text-lg font-bold">{feature.title}</h3>
 
-        <p className="mt-3 text-sm leading-6 text-slate-600">{feature.description}</p>
+        <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-400">{feature.description}</p>
       </div>
     </article>
   )
@@ -318,7 +318,7 @@ function SubjectMarquee() {
       {list.map((s) => (
         <li
           key={s}
-          className="flex items-center gap-2 whitespace-nowrap rounded-full border border-[#E9E9E3] bg-[#FAFAF7] px-4 py-1.5 text-sm font-semibold text-[#173761]/70 transition duration-200 hover:scale-105 hover:border-[#F5B82E] hover:bg-[#FFF8E3] hover:text-[#173761]"
+          className="flex items-center gap-2 whitespace-nowrap rounded-full border border-[#E9E9E3] bg-[#FAFAF7] px-4 py-1.5 text-sm font-semibold text-[#173761]/70 transition duration-200 hover:scale-105 hover:border-[#F5B82E] hover:bg-[#FFF8E3] hover:text-[#173761] dark:border-[#2A3B51] dark:bg-[#0B1525] dark:text-slate-300 dark:hover:border-[#F5B82E] dark:hover:bg-[#172840] dark:hover:text-[#F5B82E]"
         >
           <Sparkles size={13} className="text-[#E6A51C]" />
           {s}
@@ -329,7 +329,7 @@ function SubjectMarquee() {
   const reversed = [...subjects].reverse()
 
   return (
-    <div className="border-y border-[#E9E9E3] bg-white py-5">
+    <div className="border-y border-[#E9E9E3] bg-white py-5 dark:border-[#2A3B51] dark:bg-[#111F33]">
       <p className="mb-4 text-center text-xs font-bold uppercase tracking-[2px] text-slate-400">
         Plan any subject
       </p>
@@ -538,13 +538,13 @@ function LandingPage() {
 
         <div
           aria-hidden="true"
-          className="dot-grid fade-bottom pointer-events-none absolute inset-0 text-[#173761] opacity-[0.06]"
+          className="dot-grid fade-bottom pointer-events-none absolute inset-0 text-[#173761] opacity-[0.06] dark:text-slate-100"
         />
 
         <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-6 py-16 sm:py-24 lg:grid-cols-[1.1fr_0.9fr]">
           <div>
             <Reveal>
-              <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#EBDDB0] bg-[#FFF8E3] px-3 py-1.5 text-xs font-bold uppercase tracking-[2px] text-[#B78116]">
+              <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#EBDDB0] bg-[#FFF8E3] px-3 py-1.5 text-xs font-bold uppercase tracking-[2px] text-[#B78116] dark:border-[#75622E] dark:bg-[#202B3B] dark:text-[#F5B82E]">
                 <Sparkles size={13} className="animate-pulse" />
                 Your personal student planner
               </p>
@@ -559,7 +559,7 @@ function LandingPage() {
             </Reveal>
 
             <Reveal delay={160}>
-              <p className="mt-6 max-w-xl text-base leading-7 text-slate-600 sm:text-lg">
+              <p className="mt-6 max-w-xl text-base leading-7 text-slate-600 sm:text-lg dark:text-slate-400">
                 Plan your study sessions, organize your subjects, and find your next
                 learning step — all in one place.
               </p>
@@ -577,7 +577,7 @@ function LandingPage() {
 
                 <a
                   href="#features"
-                  className="rounded-lg px-4 py-3.5 text-sm font-semibold text-[#173761] transition hover:bg-[#173761]/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173761]"
+                  className="rounded-lg px-4 py-3.5 text-sm font-semibold text-[#173761] transition hover:bg-[#173761]/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173761] dark:text-slate-100 dark:hover:bg-white/5"
                 >
                   Explore features
                 </a>
@@ -587,7 +587,7 @@ function LandingPage() {
                 type="button"
                 onClick={handleMotto}
                 title="Click mo ako!"
-                className="mt-5 inline-flex items-center gap-2 rounded-full text-left text-sm text-slate-500 transition hover:text-[#173761] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F5B82E]"
+                className="mt-5 inline-flex items-center gap-2 rounded-full text-left text-sm text-slate-500 transition hover:text-[#173761] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F5B82E] dark:hover:text-slate-300"
               >
                 <span aria-hidden="true" className="h-1.5 w-1.5 animate-ping rounded-full bg-[#F5B82E]" />
                 <span key={mottoIdx} className="lp-motto">{mottos[mottoIdx]}</span>
@@ -612,7 +612,7 @@ function LandingPage() {
           <div className="mx-auto max-w-xl text-center">
             <Eyebrow>How it works</Eyebrow>
             <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Three simple steps.</h2>
-            <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">
+            <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base dark:text-slate-400">
               From a messy to-do list to a clear plan, in minutes.
             </p>
           </div>
@@ -646,39 +646,39 @@ function LandingPage() {
                 >
                   <div className="relative">
                     <span
-                      className={`flex h-16 w-16 items-center justify-center rounded-2xl shadow-[0_14px_30px_-12px_rgba(23,55,97,0.6)] ring-8 ring-[#FAFAF7] transition duration-300 group-hover:-translate-y-1 group-hover:rotate-3 group-active:scale-90 ${
+                      className={`flex h-16 w-16 items-center justify-center rounded-2xl shadow-[0_14px_30px_-12px_rgba(23,55,97,0.6)] ring-8 ring-[#FAFAF7] transition duration-300 group-hover:-translate-y-1 group-hover:rotate-3 group-active:scale-90 dark:ring-[#0B1525] ${
                         isDone ? 'bg-[#F5B82E] text-[#173761]' : 'bg-[#173761] text-[#F5B82E]'
                       }`}
                     >
                       {isDone ? <Check size={28} strokeWidth={2.4} /> : <Icon size={26} strokeWidth={1.8} />}
                     </span>
-                    <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-[#F5B82E] text-xs font-bold text-[#173761] ring-2 ring-[#FAFAF7]">
+                    <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-[#F5B82E] text-xs font-bold text-[#173761] ring-2 ring-[#FAFAF7] dark:ring-[#0B1525]">
                       {i + 1}
                     </span>
                   </div>
-                  <h3 className={`mt-6 text-lg font-bold transition ${isDone ? 'text-[#B78116]' : ''}`}>
+                  <h3 className={`mt-6 text-lg font-bold transition ${isDone ? 'text-[#B78116] dark:text-[#F5B82E]' : ''}`}>
                     {s.title}
                   </h3>
-                  <p className="mt-2 max-w-[16rem] text-sm leading-6 text-slate-600">{s.text}</p>
+                  <p className="mt-2 max-w-[16rem] text-sm leading-6 text-slate-600 dark:text-slate-400">{s.text}</p>
                 </button>
               </Reveal>
             )
           })}
         </div>
 
-        <p aria-live="polite" className="mt-10 text-center text-sm font-semibold text-[#173761]/70">
+        <p aria-live="polite" className="mt-10 text-center text-sm font-semibold text-[#173761]/70 dark:text-slate-300">
           {doneCount === 3 ? 'Handa ka na. Tara, simulan na!' : `Tap a step to check it off · ${doneCount}/3`}
         </p>
       </section>
 
       {/* Features */}
-      <section id="features" className="border-y border-[#E9E9E3] bg-white">
+      <section id="features" className="border-y border-[#E9E9E3] bg-white dark:border-[#2A3B51] dark:bg-[#111F33]">
         <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
           <Reveal>
             <div className="mb-10 max-w-xl">
               <Eyebrow>What you can do</Eyebrow>
               <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Everything starts with a plan.</h2>
-              <p className="mt-4 text-sm leading-6 text-slate-600 sm:text-base">
+              <p className="mt-4 text-sm leading-6 text-slate-600 sm:text-base dark:text-slate-400">
                 A simpler way to manage your academic workload and make progress one
                 topic at a time.
               </p>
@@ -705,14 +705,14 @@ function LandingPage() {
       {/* Final CTA */}
       <section className="mx-auto max-w-6xl px-6 pb-20">
         <Reveal>
-          <div className="relative overflow-hidden rounded-3xl border border-[#EBDDB0] bg-gradient-to-br from-[#FFF8E3] to-[#FFFDF5] px-6 py-14 text-center sm:px-12">
+          <div className="relative overflow-hidden rounded-3xl border border-[#EBDDB0] bg-gradient-to-br from-[#FFF8E3] to-[#FFFDF5] px-6 py-14 text-center sm:px-12 dark:border-[#75622E] dark:from-[#202B3B] dark:to-[#111F33]">
             <div aria-hidden="true" className="lp-drift pointer-events-none absolute -left-16 -top-16 h-56 w-56 rounded-full bg-[#F5B82E]/30 blur-3xl" />
             <div aria-hidden="true" className="lp-drift2 pointer-events-none absolute -bottom-20 -right-16 h-64 w-64 rounded-full bg-[#7FA6D6]/25 blur-3xl" />
-            <div aria-hidden="true" className="dot-grid pointer-events-none absolute inset-0 text-[#173761] opacity-[0.05]" />
+            <div aria-hidden="true" className="dot-grid pointer-events-none absolute inset-0 text-[#173761] opacity-[0.05] dark:text-slate-100" />
 
             <div className="relative">
               <h2 className="mx-auto max-w-xl text-3xl font-bold tracking-tight sm:text-4xl">Start your plan today.</h2>
-              <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-600 sm:text-base">
+              <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-600 sm:text-base dark:text-slate-400">
                 One topic, one session, one step at a time.
               </p>
               <a
