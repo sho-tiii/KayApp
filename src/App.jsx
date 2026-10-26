@@ -5,9 +5,9 @@ import Navbar from './components/layout/Navbar'
 import Footer from './components/layout/Footer'
 import LandingPage from './pages/LandingPage'
 import Dashboard from './pages/Dashboard'
+import AdminDashboard from './pages/AdminDashboard'
 import AuthModal from './components/auth/AuthModal'
 import { supabase } from './lib/supabase'
-import AdminDashboard from './pages/AdminDashboard'
 
 function getSavedTheme() {
   try {
@@ -24,13 +24,11 @@ function App() {
   const [isAuthLoading, setIsAuthLoading] = useState(true)
 
   useEffect(() => {
-    // 1. Get the session when the app first loads
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setIsAuthLoading(false)
     })
 
-    // 2. Listen for login, logout, and password recovery events
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session)
       setIsAuthLoading(false)
@@ -123,7 +121,6 @@ function App() {
         />
 
         <Routes>
-          {/* Public Landing Page */}
           <Route
             path="/"
             element={
@@ -139,7 +136,6 @@ function App() {
             }
           />
           
-          {/* Protected Dashboard Route */}
           <Route
             path="/dashboard"
             element={
@@ -159,16 +155,19 @@ function App() {
             }
           />
 
-          {/* Protected Admin Route */}
           <Route
             path="/admin"
             element={
               isAuthLoading ? (
                 <div className="flex min-h-screen items-center justify-center">
-                  <p className="text-lg font-bold">Loading Admin...</p>
+                  <p className="text-lg font-bold text-[#173761] dark:text-white">Loading Admin...</p>
                 </div>
               ) : session ? (
-                <AdminDashboard session={session} darkMode={darkMode} />
+                <AdminDashboard
+                  session={session}
+                  darkMode={darkMode}
+                  onToggleTheme={toggleTheme}
+                />
               ) : (
                 <Navigate to="/" replace />
               )
